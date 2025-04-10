@@ -43,7 +43,7 @@ jobs:
       - name: Terraform Validate
         id: validate
         run: terraform validate -no-color
-        working-directory: ./staging
+        #working-directory: ./staging
 
     
       - name: Terraform Plan
@@ -58,7 +58,7 @@ jobs:
       - name: Terraform Show
         id: show
         run: terraform show -no-color tf.plan 2>&1 > /tmp/plan.txt
-        working-directory: ./staging 
+        #working-directory: ./staging 
           
       - uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
@@ -103,6 +103,6 @@ jobs:
       - name: Terraform Apply
         if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
         run: terraform apply -input=false tf.plan
-        working-directory: ./staging
+        #working-directory: ./staging
         shell: bash
         
