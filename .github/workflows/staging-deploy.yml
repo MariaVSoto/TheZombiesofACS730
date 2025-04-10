@@ -1,16 +1,5 @@
 name: Terraform Deployment
-on:
-  push:
-    branches:
-    - staging
-    paths:
-    - staging/**
-
-  pull_request:
-    branches:
-    - staging
-    paths: 
-    - staging/**
+on: workflow_dispatch
 
 permissions:
   contents: read
@@ -42,25 +31,25 @@ jobs:
         id: fmt
         run: terraform fmt 
         continue-on-error: true
-        working-directory: ./staging
+        working-directory: ./Terraform
 
 
       - name: Terraform Init
         id: init
         run: terraform init
-        working-directory: ./staging
+        working-directory: ./Terraform
 
            
       - name: Terraform Validate
         id: validate
         run: terraform validate -no-color
-        working-directory: ./staging
+        working-directory: ./Terraform
 
     
       - name: Terraform Plan
         id: plan
         run: terraform plan -input=false -no-color -out tf.plan
-        working-directory: ./staging 
+        working-directory: ./Terraform
         continue-on-error: true
 
       - name: Get result
@@ -69,7 +58,7 @@ jobs:
       - name: Terraform Show
         id: show
         run: terraform show -no-color tf.plan 2>&1 > /tmp/plan.txt
-        working-directory: ./staging 
+        working-directory: ./Terraform 
           
       - uses: actions/github-script@v6
         if: github.event_name == 'pull_request'
@@ -114,6 +103,6 @@ jobs:
       - name: Terraform Apply
         if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
         run: terraform apply -input=false tf.plan
-        working-directory: ./staging
+        working-directory: ./Terraform
         shell: bash
         
