@@ -20,14 +20,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Full clone
 
       - name: Debug Repository Contents
         run: |
           echo "Root directory contents:"
           ls -la
-          echo "Terraform directory contents:"
-          ls -la ./Terraform || echo "Terraform directory not found"
           echo "Full repository structure:"
           find . -type f
 
@@ -37,20 +35,10 @@ jobs:
           terraform_version: 1.1.9
           terraform_wrapper: true
 
-      - name: Debug Terraform Directory
-        run: |
-          echo "Current working directory:"
-          pwd
-          echo "Terraform directory contents:"
-          ls -la . || echo "No files found"
-        working-directory: ./Terraform
-
       - name: Terraform Init
         id: init
         run: terraform init -no-color || { echo "Terraform Init failed"; exit 1; }
-        working-directory: ./Terraform
 
       - name: Terraform Plan
         id: plan
         run: terraform plan -input=false -no-color -out tf.plan -detailed-exitcode
-        working-directory: ./Terraform
