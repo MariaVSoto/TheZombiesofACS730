@@ -20,7 +20,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Full clone
+          fetch-depth: 0
 
       - name: Debug Repository Contents
         run: |
@@ -52,7 +52,5 @@ jobs:
 
       - name: Terraform Plan
         id: plan
-        run: terraform plan -input=false -no-color -out tf.plan -detailed-exitcode
-        working-directory: ./Terraform
         run: terraform plan -input=false -no-color -out tf.plan -detailed-exitcode
         working-directory: ./Terraform
