@@ -19,6 +19,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+        
+      - name: Debug Terraform Directory Contents
+        run: ls -la
+        working-directory: ./Terraform
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -34,7 +38,7 @@ jobs:
 
       - name: Terraform Init
         id: init
-        run: terraform init
+        run: terraform init -no-color || { echo "Terraform Init failed"; exit 1; }
         working-directory: ./Terraform
 
       - name: Terraform Validate
