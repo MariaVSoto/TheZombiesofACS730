@@ -9,7 +9,7 @@ terraform {
 }
 
 
-module "vpc-Prod" {
+module "network" {
   source = "./modules/network"
 
   environment        = var.environment
