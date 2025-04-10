@@ -1,96 +1,99 @@
-resource "aws_vpc" "VPC" {
-  cidr_block           = var.vpc_cidr
-  enable_dns_support   = true
-  enable_dns_hostnames = true
+# IAM Role for S3 Access
+resource "aws_iam_role" "web_role" {
+  name = "${var.group_name}WebRole"
 
-  tags = {
-    Name = "${var.team_name}-${var.environment}-Vpc"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        }
+      }
+    ]
+  })
+
+  tags = merge(var.common_tags, {
+    Name = "${var.group_name}WebRole"
+  })
+}
+
+resource "aws_iam_policy" "web_policy" {
+  name        = "${var.group_name}WebPolicy"
+  description = "Policy for web servers to access S3"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::${var.s3_bucket}",
+          "arn:aws:s3:::${var.s3_bucket}/*"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "web_role_policy_attachment" {
+  policy_arn = aws_iam_policy.web_policy.arn
+  role       = aws_iam_role.web_role.name
+}
+
+resource "aws_iam_instance_profile" "web_instance_profile" {
+  name = "${var.group_name}WebInstanceProfile"
+  role = aws_iam_role.web_role.name
+}
+
+# Launch Configuration
+resource "aws_launch_configuration" "launch_config" {
+  name_prefix          = "${var.group_name}-web-"
+  image_id             = var.ami_id
+  instance_type        = var.instance_type
+  security_groups      = [var.web_security_group_id]
+  iam_instance_profile = aws_iam_instance_profile.web_instance_profile.name
+  key_name            = var.key_name
+  user_data           = templatefile("${path.module}/setup_webserver.sh", {
+    WEBSERVER_ID = "asg"
+    GROUP_NAME   = var.group_name
+    S3_BUCKET    = var.s3_bucket
+  })
+
+  lifecycle {
+    create_before_destroy = true
   }
 }
 
-resource "aws_internet_gateway" "IGW" {
-  vpc_id = aws_vpc.VPC.id
+# Auto Scaling Group
+resource "aws_autoscaling_group" "asg" {
+  name                = "${var.group_name}-asg"
+  desired_capacity    = var.asg_desired_capacity
+  max_size            = var.asg_max_size
+  min_size            = var.asg_min_size
+  target_group_arns   = [var.target_group_arn]
+  vpc_zone_identifier = values(var.public_subnet_ids)
 
-  tags = {
-    Name = "${var.team_name}-${var.environment}-Igw"
-  }
-}
+  launch_configuration = aws_launch_configuration.launch_config.name
 
-resource "aws_subnet" "public" {
-  count = length(var.public_subnets)
-
-  vpc_id                  = aws_vpc.VPC.id
-  cidr_block              = var.public_subnets[count.index]
-  availability_zone       = var.availability_zones[count.index]
-  map_public_ip_on_launch = true
-
-  tags = {
-    Name = "${var.team_name}-${var.environment}-PublicSubnet-${count.index + 1}"
-  }
-}
-
-resource "aws_subnet" "private" {
-  count = length(var.private_subnets)
-
-  vpc_id            = aws_vpc.VPC.id
-  cidr_block        = var.private_subnets[count.index]
-  availability_zone = var.availability_zones[count.index % 2 == 0 ? 0 : 1]
-
-  tags = {
-    Name = "${var.team_name}-${var.environment}-PrivateSubnet-${count.index + 1}"
-  }
-}
-
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.VPC.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.IGW.id
+  tag {
+    key                 = "Name"
+    value              = "${var.group_name}WebServer"
+    propagate_at_launch = true
   }
 
-  tags = {
-    Name = "${var.team_name}-${var.environment}-PublicRt"
+  dynamic "tag" {
+    for_each = var.common_tags
+    content {
+      key                 = tag.key
+      value              = tag.value
+      propagate_at_launch = true
+    }
   }
-}
-
-resource "aws_route_table_association" "public" {
-  count = length(aws_subnet.public)
-
-  subnet_id      = aws_subnet.public[count.index].id
-  route_table_id = aws_route_table.public.id
-}
-
-resource "aws_eip" "nat" {
-  domain = "vpc"
-}
-
-resource "aws_nat_gateway" "NATGW" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public[0].id # First public subnet
-
-  tags = {
-    Name = "${var.team_name}-${var.environment}-NatGw"
-  }
-}
-
-resource "aws_route_table" "private" {
-  vpc_id = aws_vpc.VPC.id
-
-  route {
-    cidr_block     = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.NATGW.id
-  }
-
-  tags = {
-    Name = "${var.team_name}-${var.environment}-PrivateRt"
-  }
-}
-
-resource "aws_route_table_association" "private" {
-  count = length(aws_subnet.private)
-
-  subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private.id
-}
-
+} 
