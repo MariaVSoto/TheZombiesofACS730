@@ -19,10 +19,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-        
-      - name: Debug Terraform Directory Contents
-        run: ls -la
-        working-directory: ./Terraform
+
+      - name: Debug After Checkout
+        run: |
+          echo "Listing contents of Terraform directory:"
+          ls -la ./Terraform || echo "Terraform directory not found"
+          echo "Full directory structure:"
+          find . -type f
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -30,29 +33,20 @@ jobs:
           terraform_version: 1.1.9
           terraform_wrapper: true
 
-      - name: Terraform fmt
-        id: fmt
-        run: terraform fmt
+      - name: Debug Before Init
+        run: |
+          echo "Listing contents of Terraform directory before init:"
+          ls -la ./Terraform || echo "Terraform directory not found"
         working-directory: ./Terraform
-        continue-on-error: true
 
       - name: Terraform Init
         id: init
         run: terraform init -no-color || { echo "Terraform Init failed"; exit 1; }
         working-directory: ./Terraform
 
-      - name: Terraform Validate
-        id: validate
-        run: terraform validate -no-color
-        working-directory: ./Terraform
-
       - name: Terraform Plan
         id: plan
-        run: terraform plan -input=false -no-color -out tf.plan
-        working-directory: ./Terraform
-        #continue-on-error: true
-      - name: Debug tf.plan File
-        run: ls -la tf.plan || echo "tf.plan file not found"
+        run: terraform plan -input=false -no-color -out tf.plan -detailed-exitcode
         working-directory: ./Terraform
 
       - name: Get result
