@@ -31,13 +31,13 @@ jobs:
         id: fmt
         run: terraform fmt 
         continue-on-error: true
-        working-directory: ./staging
+       # working-directory: ./staging
 
 
       - name: Terraform Init
         id: init
         run: terraform init
-        working-directory: ./staging
+      #  working-directory: ./staging
 
            
       - name: Terraform Validate
