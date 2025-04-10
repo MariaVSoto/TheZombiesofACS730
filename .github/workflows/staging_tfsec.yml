@@ -2,7 +2,7 @@ name: Terraform Security
 
 on:
   push:
-    branches: [ "dev", "staging"]
+    branches: "staging"
     paths: 
     - staging/**
   pull_request:
