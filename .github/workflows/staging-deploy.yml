@@ -54,3 +54,5 @@ jobs:
         id: plan
         run: terraform plan -input=false -no-color -out tf.plan -detailed-exitcode
         working-directory: ./Terraform
+        run: terraform plan -input=false -no-color -out tf.plan -detailed-exitcode
+        working-directory: ./Terraform
