@@ -1,14 +1,6 @@
 name: Terraform Security
 
-on:
-  push:
-    branches: "staging"
-    paths: 
-    - staging/**
-  pull_request:
-    branches: [ "prod" ]
-    paths: 
-    - staging/**
+on: workflow_dispatch
 
 jobs:
   tfsec_tflint_staging:
