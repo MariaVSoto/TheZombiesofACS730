@@ -46,7 +46,10 @@ jobs:
         id: plan
         run: terraform plan -input=false -no-color -out tf.plan
         working-directory: ./Terraform
-        continue-on-error: true
+        #continue-on-error: true
+      - name: Debug tf.plan File
+        run: ls -la tf.plan || echo "tf.plan file not found"
+        working-directory: ./Terraform
 
       - name: Get result
         run: echo "${{ steps.validate.outputs.stdout }}"
