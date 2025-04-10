@@ -20,7 +20,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Full clone to avoid shallow clone issues
+          fetch-depth: 0  # Full clone
 
       - name: Debug Repository Contents
         run: |
