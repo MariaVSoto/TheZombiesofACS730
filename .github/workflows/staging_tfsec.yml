@@ -1,20 +1,6 @@
-<<<<<<< HEAD
-name: tfsec
-
-on: workflow_dispatch
-=======
 name: Terraform Security
 
-on:
-  push:
-    branches: "staging"
-    paths: 
-    - staging/**
-  pull_request:
-    branches: [ "prod" ]
-    paths: 
-    - staging/**
->>>>>>> 10debe25c4dcd4946f991776cfd5881fafa42d8a
+on: workflow_dispatch
 
 jobs:
   tfsec_tflint_staging:
