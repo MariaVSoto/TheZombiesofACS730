@@ -94,3 +94,69 @@ resource "aws_route_table_association" "private" {
   route_table_id = aws_route_table.private.id
 }
 
+# Bastion Host Security Group
+resource "aws_security_group" "bastion_sg" {
+  name        = "${var.team_name}-${var.environment}-bastion-sg"
+  description = "Security group for bastion host"
+  vpc_id      = aws_vpc.VPC.id
+
+  # Allow SSH access from anywhere
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow SSH from anywhere"
+  }
+
+  # Allow all outbound traffic
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
+
+  tags = {
+    Name        = "${var.team_name}-${var.environment}-bastion-sg"
+    Environment = var.environment
+    Team        = var.team_name
+    Project     = "ACS730"
+    Terraform   = "true"
+  }
+}
+
+# Private Subnet Security Group
+resource "aws_security_group" "private_sg" {
+  name        = "${var.team_name}-${var.environment}-private-sg"
+  description = "Security group for resources in private subnets"
+  vpc_id      = aws_vpc.VPC.id
+
+  # Allow SSH access from bastion host
+  ingress {
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [aws_security_group.bastion_sg.id]
+    description     = "Allow SSH from bastion host"
+  }
+
+  # Allow all outbound traffic
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+    description = "Allow all outbound traffic"
+  }
+
+  tags = {
+    Name        = "${var.team_name}-${var.environment}-private-sg"
+    Environment = var.environment
+    Team        = var.team_name
+    Project     = "ACS730"
+    Terraform   = "true"
+  }
+}
+

@@ -1,3 +1,54 @@
+# Web Server Security Group
+resource "aws_security_group" "web_sg" {
+  name        = "${var.team_name}-${var.environment}-web-sg"
+  description = "Security group for web servers"
+  vpc_id      = var.vpc_id
+
+  # Allow HTTP from internet
+  ingress {
+    description = "Allow HTTP traffic"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Allow HTTPS from internet
+  ingress {
+    description = "Allow HTTPS traffic"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # Allow SSH from bastion host
+  ingress {
+    description     = "Allow SSH from bastion host"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [var.bastion_sg_id]
+  }
+
+  # Allow all outbound traffic
+  egress {
+    description = "Allow all outbound traffic"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = merge(var.common_tags, {
+    Name        = "${var.team_name}-${var.environment}-web-sg"
+    Environment = var.environment
+    Team        = var.team_name
+    Project     = "ACS730"
+    Terraform   = "true"
+  })
+}
+
 # IAM Role for S3 Access
 resource "aws_iam_role" "web_role" {
   name = "${var.team_name}-${var.environment}-web-role"
@@ -57,7 +108,7 @@ resource "aws_launch_configuration" "launch_config" {
   name_prefix          = "${var.team_name}-${var.environment}-web-"
   image_id             = var.ami_id
   instance_type        = var.instance_type
-  security_groups      = [var.web_security_group_id]
+  security_groups      = [aws_security_group.web_sg.id]
   iam_instance_profile = aws_iam_instance_profile.web_instance_profile.name
   key_name            = var.key_name
   user_data           = templatefile("${path.module}/setup_webserver.sh", {

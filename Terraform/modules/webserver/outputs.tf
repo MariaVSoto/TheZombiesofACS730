@@ -26,4 +26,9 @@ output "instance_profile_name" {
 output "instance_profile_arn" {
   description = "ARN of the IAM instance profile"
   value       = aws_iam_instance_profile.web_instance_profile.arn
+}
+
+output "web_sg_id" {
+  description = "ID of the web server security group"
+  value       = aws_security_group.web_sg.id
 } 
