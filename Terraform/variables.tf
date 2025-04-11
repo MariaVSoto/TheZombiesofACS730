@@ -58,6 +58,33 @@ variable "asg_desired_capacity" {
   type        = number
 }
 
+variable "ami_id" {
+  description = "ID of the AMI to use for EC2 instances"
+  type        = string
+}
+
+variable "s3_bucket" {
+  description = "Name of the S3 bucket for web content"
+  type        = string
+}
+
+variable "admin_ip_cidr" {
+  description = "CIDR block for admin access to bastion host"
+  type        = string
+}
+
+variable "project_name" {
+  description = "Name of the project"
+  type        = string
+  default     = "ACS730"
+}
+
+variable "additional_tags" {
+  description = "Additional tags to add to resources"
+  type        = map(string)
+  default     = {}
+}
+
 variable "common_tags" {
   description = "Common tags for all resources"
   type        = map(string)

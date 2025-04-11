@@ -28,8 +28,13 @@ variable "instance_type" {
   type        = string
 }
 
-variable "web_security_group_id" {
-  description = "ID of the web security group"
+variable "vpc_id" {
+  description = "ID of the VPC"
+  type        = string
+}
+
+variable "bastion_sg_id" {
+  description = "ID of the bastion security group"
   type        = string
 }
 
