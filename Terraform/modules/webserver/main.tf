@@ -4,7 +4,6 @@ resource "aws_security_group" "web_sg" {
   description = "Security group for web servers"
   vpc_id      = var.vpc_id
 
-  # Allow HTTP from ALB
   ingress {
     description     = "Allow HTTP from ALB"
     from_port       = 80
@@ -13,7 +12,6 @@ resource "aws_security_group" "web_sg" {
     security_groups = [var.alb_security_group_id]
   }
 
-  # Allow SSH from bastion host
   ingress {
     description     = "Allow SSH from bastion host"
     from_port       = 22
@@ -22,7 +20,6 @@ resource "aws_security_group" "web_sg" {
     security_groups = [var.bastion_sg_id]
   }
 
-  # Allow all outbound traffic
   egress {
     description = "Allow all outbound traffic"
     from_port   = 0
@@ -71,7 +68,7 @@ resource "aws_security_group" "private_sg" {
 
 # IAM Role for S3 Access
 resource "aws_iam_role" "web_role" {
-  name = "${var.team_name}-${var.environment}-web-role"
+  name = "${var.environment}-web-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -87,12 +84,12 @@ resource "aws_iam_role" "web_role" {
   })
 
   tags = merge(var.common_tags, {
-    Name = "${var.team_name}-${var.environment}-web-role"
+    Name = "${var.environment}-web-role"
   })
 }
 
 resource "aws_iam_policy" "web_policy" {
-  name        = "${var.team_name}-${var.environment}-web-policy"
+  name        = "${var.environment}-web-policy"
   description = "Policy for web servers to access S3"
 
   policy = jsonencode({
@@ -119,7 +116,7 @@ resource "aws_iam_role_policy_attachment" "web_role_policy_attachment" {
 }
 
 resource "aws_iam_instance_profile" "web_instance_profile" {
-  name = "${var.team_name}-${var.environment}-web-profile"
+  name = "${var.environment}-web-profile"
   role = aws_iam_role.web_role.name
 }
 
@@ -287,24 +284,6 @@ resource "aws_autoscaling_group" "web_asg" {
   }
 }
 
-# CloudWatch Alarm for ASG Scaling
-resource "aws_cloudwatch_metric_alarm" "high_cpu" {
-  alarm_name          = "${var.team_name}-${var.environment}-web-high-cpu"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = "2"
-  metric_name        = "CPUUtilization"
-  namespace          = "AWS/EC2"
-  period             = "300"
-  statistic          = "Average"
-  threshold          = "80"
-  alarm_description  = "This metric monitors EC2 CPU utilization"
-  alarm_actions     = [aws_autoscaling_group.web_asg.arn]
-
-  dimensions = {
-    AutoScalingGroupName = aws_autoscaling_group.web_asg.name
-  }
-}
-
 # Bastion Host (Webserver 2)
 resource "aws_instance" "bastion" {
   subnet_id = var.public_subnet_ids[1]  # Public Subnet 2
@@ -371,4 +350,4 @@ resource "aws_instance" "vm6" {
       Name = "${var.environment}-vm6"
     }
   )
-} 
+}
