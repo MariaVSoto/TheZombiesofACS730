@@ -33,15 +33,6 @@ variable "availability_zones" {
   type        = list(string)
 }
 
-variable "admin_ip_cidr" {
-  description = "CIDR block for admin access to bastion host"
-  type        = string
-  validation {
-    condition     = can(cidrhost(var.admin_ip_cidr, 0))
-    error_message = "The admin_ip_cidr value must be a valid CIDR block"
-  }
-}
-
 # Tags
 variable "common_tags" {
   description = "Common tags for all resources"
