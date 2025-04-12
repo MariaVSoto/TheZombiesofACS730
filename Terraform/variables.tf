@@ -1,15 +1,21 @@
 variable "environment" {
-  description = "Environment name (dev/prod)"
+  description = "Environment name (e.g., dev, prod)"
   type        = string
 }
 
 variable "team_name" {
-  description = "Name of the team"
+  description = "Name of the team managing the resources"
   type        = string
 }
 
+variable "group_name" {
+  description = "Name of the project group, used for resource naming"
+  type        = string
+  default     = "zombies"
+}
+
 variable "region" {
-  description = "AWS region"
+  description = "AWS region for deploying resources"
   type        = string
 }
 
@@ -29,33 +35,41 @@ variable "private_subnets" {
 }
 
 variable "availability_zones" {
-  description = "List of availability zones"
+  description = "List of AWS availability zones"
   type        = list(string)
 }
 
 variable "instance_type" {
-  description = "EC2 instance type"
+  description = "EC2 instance type for the web servers"
   type        = string
 }
 
 variable "key_name" {
-  description = "Name of the SSH key pair"
+  description = "Name of the SSH key pair for EC2 instances"
+  type        = string
+}
+
+variable "ssh_public_key" {
+  description = "Public SSH key content for EC2 instances"
   type        = string
 }
 
 variable "asg_min_size" {
-  description = "Minimum number of instances in ASG"
+  description = "Minimum number of instances in Auto Scaling Group"
   type        = number
+  default     = 2
 }
 
 variable "asg_max_size" {
-  description = "Maximum number of instances in ASG"
+  description = "Maximum number of instances in Auto Scaling Group"
   type        = number
+  default     = 4
 }
 
 variable "asg_desired_capacity" {
-  description = "Desired number of instances in ASG"
+  description = "Desired number of instances in Auto Scaling Group"
   type        = number
+  default     = 2
 }
 
 variable "ami_id" {
@@ -64,7 +78,7 @@ variable "ami_id" {
 }
 
 variable "s3_bucket" {
-  description = "Name of the S3 bucket for web content"
+  description = "Name of the S3 bucket for web content and ALB logs"
   type        = string
 }
 
@@ -79,13 +93,44 @@ variable "project_name" {
   default     = "ACS730"
 }
 
+variable "cost_center" {
+  description = "Cost center for resource billing"
+  type        = string
+  default     = "ACS730-Project"
+}
+
+variable "owner" {
+  description = "Owner of the resources"
+  type        = string
+  default     = "Zombies Team"
+}
+
+variable "managed_by" {
+  description = "Tool or team managing the resources"
+  type        = string
+  default     = "Terraform"
+}
+
 variable "additional_tags" {
-  description = "Additional tags to add to resources"
+  description = "Additional tags to be applied to all resources"
   type        = map(string)
   default     = {}
 }
 
 variable "common_tags" {
-  description = "Common tags for all resources"
+  description = "Common tags to be applied to all resources"
   type        = map(string)
+  default     = {}
+}
+
+variable "terraform_state_bucket" {
+  description = "Name of the S3 bucket for storing Terraform state"
+  type        = string
+  default     = "zombies-acs730"
+}
+
+variable "terraform_state_key" {
+  description = "Object key for storing Terraform state file"
+  type        = string
+  default     = "terraform.tfstate"
 }

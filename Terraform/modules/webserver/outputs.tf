@@ -1,21 +1,31 @@
+output "web_security_group_id" {
+  description = "ID of the web servers security group"
+  value       = aws_security_group.web_sg.id
+}
+
 output "asg_name" {
   description = "Name of the Auto Scaling Group"
-  value       = aws_autoscaling_group.asg.name
+  value       = aws_autoscaling_group.web_asg.name
 }
 
-output "launch_configuration_name" {
-  description = "Name of the Launch Configuration"
-  value       = aws_launch_configuration.launch_config.name
+output "webserver2_id" {
+  description = "Instance ID of Webserver 2 (Bastion)"
+  value       = aws_instance.webserver2.id
 }
 
-output "iam_role_name" {
-  description = "Name of the IAM role"
-  value       = aws_iam_role.web_role.name
+output "webserver4_id" {
+  description = "Instance ID of Webserver 4"
+  value       = aws_instance.webserver4.id
 }
 
-output "iam_role_arn" {
-  description = "ARN of the IAM role"
-  value       = aws_iam_role.web_role.arn
+output "webserver5_id" {
+  description = "Instance ID of Webserver 5"
+  value       = aws_instance.webserver5.id
+}
+
+output "vm6_id" {
+  description = "Instance ID of VM 6"
+  value       = aws_instance.vm6.id
 }
 
 output "instance_profile_name" {
@@ -26,9 +36,4 @@ output "instance_profile_name" {
 output "instance_profile_arn" {
   description = "ARN of the IAM instance profile"
   value       = aws_iam_instance_profile.web_instance_profile.arn
-}
-
-output "web_sg_id" {
-  description = "ID of the web server security group"
-  value       = aws_security_group.web_sg.id
 } 

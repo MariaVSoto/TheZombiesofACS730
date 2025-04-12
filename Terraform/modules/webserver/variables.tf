@@ -4,13 +4,38 @@ variable "environment" {
 }
 
 variable "team_name" {
-  description = "Name of the team"
+  description = "Team name"
   type        = string
 }
 
-variable "common_tags" {
-  description = "Common tags for all resources"
-  type        = map(string)
+variable "vpc_id" {
+  description = "VPC ID"
+  type        = string
+}
+
+variable "public_subnet_ids" {
+  description = "List of public subnet IDs"
+  type        = list(string)
+}
+
+variable "private_subnet_ids" {
+  description = "List of private subnet IDs"
+  type        = list(string)
+}
+
+variable "ami_id" {
+  description = "AMI ID for the EC2 instances"
+  type        = string
+}
+
+variable "instance_type" {
+  description = "Instance type for the EC2 instances"
+  type        = string
+}
+
+variable "key_name" {
+  description = "SSH key pair name"
+  type        = string
 }
 
 variable "s3_bucket" {
@@ -18,44 +43,14 @@ variable "s3_bucket" {
   type        = string
 }
 
-variable "ami_id" {
-  description = "ID of the AMI to use for web servers"
-  type        = string
-}
-
-variable "instance_type" {
-  description = "Instance type for web servers"
-  type        = string
-}
-
-variable "vpc_id" {
-  description = "ID of the VPC"
-  type        = string
-}
-
 variable "bastion_sg_id" {
-  description = "ID of the bastion security group"
+  description = "Security group ID of the bastion host"
   type        = string
 }
 
-variable "key_name" {
-  description = "Name of the SSH key pair"
+variable "alb_security_group_id" {
+  description = "Security group ID of the Application Load Balancer"
   type        = string
-}
-
-variable "asg_desired_capacity" {
-  description = "Desired number of instances in ASG"
-  type        = number
-}
-
-variable "asg_max_size" {
-  description = "Maximum number of instances in ASG"
-  type        = number
-}
-
-variable "asg_min_size" {
-  description = "Minimum number of instances in ASG"
-  type        = number
 }
 
 variable "target_group_arn" {
@@ -63,7 +58,22 @@ variable "target_group_arn" {
   type        = string
 }
 
-variable "public_subnet_ids" {
-  description = "List of public subnet IDs"
-  type        = list(string)
-} 
+variable "asg_min_size" {
+  description = "Minimum size of the Auto Scaling Groups (total for both Web1 and Web3)"
+  type        = number
+}
+
+variable "asg_max_size" {
+  description = "Maximum size of the Auto Scaling Groups (total for both Web1 and Web3)"
+  type        = number
+}
+
+variable "asg_desired_capacity" {
+  description = "Desired capacity of the Auto Scaling Groups (total for both Web1 and Web3)"
+  type        = number
+}
+
+variable "common_tags" {
+  description = "Common tags for all resources"
+  type        = map(string)
+  default     = {} 
