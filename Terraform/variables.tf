@@ -62,3 +62,37 @@ variable "common_tags" {
   description = "Common tags for all resources"
   type        = map(string)
 }
+variable "enable_https" {
+  description = "Whether to enable HTTPS listener for the ALB"
+  type        = bool
+  default     = false
+}
+
+variable "certificate_arn" {
+  description = "ARN of the SSL certificate for HTTPS"
+  type        = string
+  default     = ""
+}
+
+variable "alb_name" {
+  description = "Name of the Application Load Balancer"
+  type        = string
+  default     = ""
+}
+
+variable "alb_internal" {
+  description = "Whether the ALB is internal or internet-facing"
+  type        = bool
+  default     = false
+}
+
+variable "alb_enable_deletion_protection" {
+  description = "Whether to enable deletion protection for the ALB"
+  type        = bool
+  default     = false
+}
+
+variable "alb_security_group_id" {
+  description = "Security group ID for the ALB"
+  type        = string
+}

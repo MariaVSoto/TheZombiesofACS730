@@ -36,7 +36,7 @@ asg_desired_capacity = 2
 
 # Tag Settings
 common_tags = {
-  Team        = "zombies"
-  Project     = "ACS730"
-  Terraform   = "true"
+  Team      = "zombies"
+  Project   = "ACS730"
+  Terraform = "true"
 } 
