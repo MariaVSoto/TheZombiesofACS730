@@ -39,3 +39,12 @@ variable "common_tags" {
   type        = map(string)
   default     = {}
 }
+
+variable "admin_ip_cidr" {
+  description = "CIDR block for admin access"
+  type        = string
+  validation {
+    condition     = can(cidrhost(var.admin_ip_cidr, 0))
+    error_message = "The admin IP CIDR must be a valid CIDR block format. Please provide a valid CIDR notation (e.g., 10.0.0.0/24)."
+  }
+}
