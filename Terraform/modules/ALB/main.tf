@@ -7,16 +7,23 @@ resource "aws_lb" "alb" {
 
   enable_deletion_protection = var.alb_enable_deletion_protection
 
+  access_logs {
+    bucket  = var.access_logs_bucket
+    prefix  = "alb-logs"
+    enabled = true
+  }
+
   tags = merge(var.common_tags, {
     Name = var.alb_name != "" ? var.alb_name : "${var.team_name}-${var.environment}-alb"
   })
 }
 
 resource "aws_lb_target_group" "web_tg" {
-  name     = "${var.team_name}-${var.environment}-tg"
-  port     = 80
-  protocol = "HTTP"
-  vpc_id   = var.vpc_id
+  name                 = "${var.team_name}-${var.environment}-tg"
+  port                 = 80
+  protocol             = "HTTP"
+  vpc_id               = var.vpc_id
+  deregistration_delay = 300
 
   health_check {
     enabled             = true
@@ -28,7 +35,6 @@ resource "aws_lb_target_group" "web_tg" {
     protocol           = "HTTP"
     timeout            = 5
     unhealthy_threshold = 2
-    success_codes      = "200"
   }
 
   tags = merge(var.common_tags, {
@@ -42,8 +48,12 @@ resource "aws_lb_listener" "http" {
   protocol          = "HTTP"
 
   default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.web_tg.arn
+    type = "redirect"
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
   }
 }
 

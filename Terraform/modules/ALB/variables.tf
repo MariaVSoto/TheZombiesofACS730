@@ -1,25 +1,25 @@
 variable "team_name" {
-  description = "Name of the team"
+  description = "Name of the team/project"
   type        = string
 }
 
 variable "environment" {
-  description = "Environment name (e.g., dev, prod)"
+  description = "Environment name (e.g., dev, staging, prod)"
   type        = string
 }
 
 variable "vpc_id" {
-  description = "VPC ID where the ALB will be deployed"
+  description = "ID of the VPC"
   type        = string
 }
 
 variable "public_subnet_ids" {
-  description = "List of public subnet IDs for ALB"
+  description = "List of public subnet IDs for the ALB"
   type        = list(string)
 }
 
 variable "alb_security_group_id" {
-  description = "Security group ID for the ALB"
+  description = "ID of the security group for the ALB"
   type        = string
 }
 
@@ -30,9 +30,9 @@ variable "common_tags" {
 }
 
 variable "enable_https" {
-  description = "Whether to enable HTTPS listener"
+  description = "Enable HTTPS listener"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "certificate_arn" {
@@ -48,13 +48,18 @@ variable "alb_name" {
 }
 
 variable "alb_internal" {
-  description = "Whether the ALB is internal or internet-facing"
+  description = "Whether the ALB is internal"
   type        = bool
   default     = false
 }
 
 variable "alb_enable_deletion_protection" {
-  description = "Whether to enable deletion protection for the ALB"
+  description = "Enable deletion protection for the ALB"
   type        = bool
-  default     = false
+  default     = true
+}
+
+variable "access_logs_bucket" {
+  description = "S3 bucket for ALB access logs"
+  type        = string
 }
