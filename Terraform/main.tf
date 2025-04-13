@@ -96,7 +96,7 @@ module "webserver" {
   alb_security_group_id = module.network.alb_security_group_id
   target_group_arn      = module.alb.target_group_arn
   instance_type         = var.instance_type
-  key_name              = aws_key_pair.deployer.key_name
+  key_name              = var.key_name
   ami_id                = var.ami_id
   common_tags           = var.common_tags
   additional_tags       = var.additional_tags

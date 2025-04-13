@@ -56,5 +56,5 @@ variable "alb_internal" {
 variable "alb_enable_deletion_protection" {
   description = "Enable deletion protection for the ALB"
   type        = bool
-  default     = true
+  default     = false
 }
