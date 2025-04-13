@@ -10,7 +10,7 @@ terraform {
 
 # Network Module
 module "network" {
-  source = "./staging/modules/network"
+  source = "../modules/network"
 
   environment        = var.environment
   team_name         = var.team_name
@@ -24,7 +24,7 @@ module "network" {
 
 # ALB Module
 module "alb" {
-  source = "../staging/modules/ALB"
+  source = "../modules/ALB"
 
   vpc_id                = module.network.vpc_id
   public_subnet_ids     = module.network.public_subnet_ids
@@ -37,7 +37,7 @@ module "alb" {
 
 # Webserver Module
 module "webserver" {
-  source = "../staging/modules/webserver"
+  source = "../modules/webserver"
 
   team_name             = var.team_name
   vpc_id                = module.network.vpc_id
