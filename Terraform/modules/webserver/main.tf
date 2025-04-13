@@ -14,16 +14,16 @@ resource "aws_launch_template" "asg_lt" {
               systemctl start httpd
               systemctl enable httpd
               
-              # Get instance metadata
+              # Get instance metadata using IMDSv2
               TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
               INSTANCE_ID=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/instance-id)
               PRIVATE_IP=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/local-ipv4)
               AVAILABILITY_ZONE=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
               
-              # Get ASG name using AWS CLI
-              ASG_NAME=$(aws autoscaling describe-auto-scaling-instances --instance-ids $INSTANCE_ID --region us-east-1 --query 'AutoScalingInstances[0].AutoScalingGroupName' --output text)
+              # Get ASG name using AWS CLI with dynamic region
+              ASG_NAME=$(aws autoscaling describe-auto-scaling-instances --instance-ids $INSTANCE_ID --region ${var.region} --query 'AutoScalingInstances[0].AutoScalingGroupName' --output text)
               
-              # Create custom index.html
+              # Create custom index.html with enhanced styling
               cat > /var/www/html/index.html <<-HTML
               <!DOCTYPE html>
               <html>
@@ -78,7 +78,7 @@ resource "aws_launch_template" "asg_lt" {
               </html>
               HTML
 
-              # Add instance metadata to logs
+              # Add instance metadata to logs for monitoring
               echo "Instance Metadata:" >> /var/log/user-data.log
               echo "Instance ID: $INSTANCE_ID" >> /var/log/user-data.log
               echo "Private IP: $PRIVATE_IP" >> /var/log/user-data.log
@@ -96,7 +96,7 @@ resource "aws_launch_template" "asg_lt" {
   }
 }
 
-# Launch Template for Webserver 4
+# Launch Template for Webserver 4 (Static Instance)
 resource "aws_launch_template" "webserver4_lt" {
   name_prefix   = "${var.team_name}-webserver4-lt"
   image_id      = var.ami_id
@@ -112,13 +112,13 @@ resource "aws_launch_template" "webserver4_lt" {
               systemctl start httpd
               systemctl enable httpd
               
-              # Get instance metadata
+              # Get instance metadata using IMDSv2
               TOKEN=$(curl -X PUT "http://169.254.169.254/latest/api/token" -H "X-aws-ec2-metadata-token-ttl-seconds: 21600")
               INSTANCE_ID=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/instance-id)
               PRIVATE_IP=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/local-ipv4)
               AVAILABILITY_ZONE=$(curl -H "X-aws-ec2-metadata-token: $TOKEN" -s http://169.254.169.254/latest/meta-data/placement/availability-zone)
               
-              # Create custom index.html
+              # Create custom index.html with enhanced styling
               cat > /var/www/html/index.html <<-HTML
               <!DOCTYPE html>
               <html>
@@ -172,7 +172,7 @@ resource "aws_launch_template" "webserver4_lt" {
               </html>
               HTML
 
-              # Add instance metadata to logs
+              # Add instance metadata to logs for monitoring
               echo "Instance Metadata:" >> /var/log/user-data.log
               echo "Instance ID: $INSTANCE_ID" >> /var/log/user-data.log
               echo "Private IP: $PRIVATE_IP" >> /var/log/user-data.log
