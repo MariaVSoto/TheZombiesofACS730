@@ -1,0 +1,22 @@
+plugin: aws_ec2
+regions:
+  - us-east-1
+
+filters:
+  tag:Project: ACS730
+  tag:Team: zombies
+
+keyed_groups:
+  - key: tags.Name
+    prefix: tag_Name
+  - key: placement.availability_zone
+    prefix: az
+
+hostnames:
+  - private-ip-address
+  - tag:Name
+  - dns-name
+  - private-dns-name
+
+compose:
+  ansible_host: private_ip_address 
