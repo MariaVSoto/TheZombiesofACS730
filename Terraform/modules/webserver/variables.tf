@@ -1,109 +1,108 @@
-variable "environment" {
-  description = "Environment name"
+variable "team_name" {
   type        = string
+  description = "Name of the team for resource naming"
+}
+
+variable "region" {
+  type        = string
+  description = "AWS region"
 }
 
 variable "common_tags" {
-  description = "Common tags for all resources"
   type        = map(string)
-  default     = {}
+  description = "Common tags to be applied to all resources"
 }
 
 variable "s3_bucket" {
-  description = "Name of the S3 bucket for web content"
   type        = string
+  description = "S3 bucket name for storing artifacts"
 }
 
 variable "ami_id" {
-  description = "ID of the AMI to use for instances"
   type        = string
+  description = "AMI ID for the EC2 instances"
 }
 
 variable "instance_type" {
-  description = "Instance type for all instances"
   type        = string
+  description = "Instance type for the EC2 instances"
 }
 
 variable "vpc_id" {
-  description = "ID of the VPC"
   type        = string
+  description = "VPC ID where resources will be created"
 }
 
 variable "bastion_sg_id" {
-  description = "ID of the bastion security group"
   type        = string
+  description = "Security group ID of the bastion host"
 }
 
 variable "alb_security_group_id" {
-  description = "ID of the ALB security group"
   type        = string
+  description = "Security group ID of the Application Load Balancer"
 }
 
 variable "key_name" {
-  description = "Name of the SSH key pair"
   type        = string
+  description = "Name of the SSH key pair"
 }
 
 variable "asg_desired_capacity" {
-  description = "Desired number of instances in ASG"
   type        = number
+  description = "Desired number of instances in the Auto Scaling Group"
   default     = 2
 }
 
 variable "asg_max_size" {
-  description = "Maximum number of instances in ASG"
   type        = number
+  description = "Maximum number of instances in the Auto Scaling Group"
   default     = 4
 }
 
 variable "asg_min_size" {
-  description = "Minimum number of instances in ASG"
   type        = number
+  description = "Minimum number of instances in the Auto Scaling Group"
   default     = 2
 }
 
 variable "target_group_arn" {
-  description = "ARN of the ALB target group"
   type        = string
+  description = "ARN of the ALB target group"
 }
 
 variable "public_subnet_ids" {
-  description = "List of public subnet IDs"
   type        = list(string)
+  description = "List of public subnet IDs"
 }
 
 variable "private_subnet_ids" {
-  description = "List of private subnet IDs"
   type        = list(string)
-}
-
-variable "team_name" {
-  description = "Name of the team for resource naming"
-  type        = string
+  description = "List of private subnet IDs"
 }
 
 variable "bastion_subnet_index" {
-  description = "Index of the public subnet for bastion host"
   type        = number
+  description = "Index of the public subnet for bastion host"
 }
 
 variable "web4_subnet_index" {
-  description = "Index of the public subnet for webserver4"
   type        = number
+  description = "Index of the public subnet for webserver4"
 }
 
 variable "web5_subnet_index" {
-  description = "Index of the private subnet for VM5"
   type        = number
+  description = "Index of the private subnet for VM5"
 }
 
 variable "vm6_subnet_index" {
-  description = "Index of the private subnet for VM6"
   type        = number
+  description = "Index of the private subnet for VM6"
 }
 
 variable "additional_tags" {
-  description = "Additional tags to be applied to all resources"
   type        = map(string)
+  description = "Additional tags to be applied to all resources"
   default     = {}
 }

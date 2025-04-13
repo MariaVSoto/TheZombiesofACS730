@@ -35,7 +35,7 @@ key_name      = "zombieacs730"
 ami_id        = "ami-00a929b66ed6e0de6" # Amazon Linux 2023 AMI for us-east-1
 
 # S3 Settings
-s3_bucket = "zombies-acs730"
+s3_bucket = "thezombiesofacs730"
 
 # Auto Scaling Group Settings (for Webserver 1 and 3)
 asg_min_size         = 2 # Minimum one instance each for Webserver 1 and 3
