@@ -72,6 +72,15 @@ resource "aws_launch_template" "asg_lt" {
   image_id      = var.ami_id
   instance_type = var.instance_type
   key_name      = var.key_name
+  
+  vpc_security_group_ids = [aws_security_group.web_sg.id]
+  
+  tag_specifications {
+    resource_type = "instance"
+    tags = merge(var.common_tags, var.additional_tags, {
+      Name = "${var.team_name}-webserver-asg"
+    })
+  }
 
   user_data = base64encode(<<-EOF
               #!/bin/bash
@@ -153,16 +162,8 @@ resource "aws_launch_template" "asg_lt" {
               echo "ASG Name: $ASG_NAME" >> /var/log/user-data.log
               EOF
   )
-
-  vpc_security_group_ids = [aws_security_group.web_sg.id]
-
-  tag_specifications {
-    resource_type = "instance"
-    tags = merge(var.common_tags, var.additional_tags, {
-      Name = "${var.team_name}-webserver-asg"
-    })
-  }
 }
+
 
 # Launch Template for Webserver 2 (Bastion Host)
 resource "aws_launch_template" "bastion_lt" {
@@ -170,6 +171,16 @@ resource "aws_launch_template" "bastion_lt" {
   image_id      = var.ami_id
   instance_type = var.instance_type
   key_name      = var.key_name
+  
+  vpc_security_group_ids = [aws_security_group.web_sg.id]
+
+  tag_specifications {
+    resource_type = "instance"
+    tags          = merge(var.common_tags, var.additional_tags, {
+      Name = "${var.team_name}-webserver2"
+    })
+  }
+
 
   user_data = base64encode(<<-EOF
               #!/bin/bash
@@ -237,19 +248,10 @@ resource "aws_launch_template" "bastion_lt" {
               EOF
   )
 
-  iam_instance_profile {
-    name = "LabProfile"
-  }
-
-  vpc_security_group_ids = [aws_security_group.web_sg.id]
-
-  tag_specifications {
-    resource_type = "instance"
-    tags = merge(var.common_tags, var.additional_tags, {
-      Name = "${var.team_name}-webserver2"
-    })
-  }
+  # iam_instance_profile {
+  #   name = "LabProfile"
 }
+
 
 # Launch Template for Webserver 4
 resource "aws_launch_template" "webserver4_lt" {
@@ -257,6 +259,15 @@ resource "aws_launch_template" "webserver4_lt" {
   image_id      = var.ami_id
   instance_type = var.instance_type
   key_name      = var.key_name
+  
+  vpc_security_group_ids = [aws_security_group.web_sg.id]
+
+  tag_specifications {
+    resource_type = "instance"
+    tags = merge(var.common_tags, var.additional_tags, {
+      Name = "${var.team_name}-webserver4"
+    })
+  }
 
   user_data = base64encode(<<-EOF
               #!/bin/bash
@@ -334,19 +345,9 @@ resource "aws_launch_template" "webserver4_lt" {
               EOF
   )
 
-  iam_instance_profile {
-    name = "LabProfile"
+  # iam_instance_profile {
+  #   name = "LabProfile"
   }
-
-  vpc_security_group_ids = [aws_security_group.web_sg.id]
-
-  tag_specifications {
-    resource_type = "instance"
-    tags = merge(var.common_tags, var.additional_tags, {
-      Name = "${var.team_name}-webserver4"
-    })
-  }
-}
 
 # Launch Template for Webserver 5 and 6
 resource "aws_launch_template" "private_lt" {
@@ -354,10 +355,6 @@ resource "aws_launch_template" "private_lt" {
   image_id      = var.ami_id
   instance_type = var.instance_type
   key_name      = var.key_name
-
-  iam_instance_profile {
-    name = "LabProfile"
-  }
 
   vpc_security_group_ids = [aws_security_group.private_sg.id]
 
@@ -400,6 +397,7 @@ resource "aws_instance" "bastion" {
     version = "$Latest"
   }
   subnet_id = var.public_subnet_ids[var.bastion_subnet_index]
+  
 
   tags = merge(var.common_tags, var.additional_tags, {
     Name = "${var.team_name}-webserver2"
@@ -443,4 +441,9 @@ resource "aws_instance" "vm6" {
   tags = merge(var.common_tags, var.additional_tags, {
     Name = "${var.team_name}-webserver-private"
   })
+}
+
+resource "aws_key_pair" "deployer" {
+  key_name   = var.key_name
+  public_key = file("~/.ssh/${var.key_name}.pub")
 }
