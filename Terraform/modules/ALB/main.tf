@@ -10,6 +10,10 @@ resource "aws_lb" "alb" {
   tags = merge(var.common_tags, {
     Name = var.alb_name != "" ? var.alb_name : "${var.team_name}-${var.environment}-alb"
   })
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_lb_target_group" "web_tg" {
@@ -34,6 +38,10 @@ resource "aws_lb_target_group" "web_tg" {
   tags = merge(var.common_tags, {
     Name = "${var.team_name}-${var.environment}-tg"
   })
+
+  lifecycle {
+    create_before_destroy = true
+  }
 }
 
 resource "aws_lb_listener" "http" {
