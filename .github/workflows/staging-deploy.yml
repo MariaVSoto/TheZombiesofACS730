@@ -57,19 +57,12 @@ jobs:
 
       - name: Select Terraform Workspace
         run: |
-          # Desactivar temporalmente la variable de entorno
-          OLD_TF_WORKSPACE=$TF_WORKSPACE
+          echo "Current TF_WORKSPACE: $TF_WORKSPACE"
+          terraform workspace list
+          terraform workspace show
           unset TF_WORKSPACE
-          
-          if terraform workspace list | grep -q "^$OLD_TF_WORKSPACE\$"; then
-            echo "Selecting existing workspace: $OLD_TF_WORKSPACE"
-            terraform workspace select "$OLD_TF_WORKSPACE"
-          else
-            echo "Creating new workspace: $OLD_TF_WORKSPACE"
-            terraform workspace new "$OLD_TF_WORKSPACE"
-          fi
-          
-          export TF_WORKSPACE=$OLD_TF_WORKSPACE
+          terraform workspace select ${{ github.event.inputs.environment || 'staging' }} || \
+          terraform workspace new ${{ github.event.inputs.environment || 'staging' }}
         working-directory: ./Terraform
 
       - name: Terraform Validate
