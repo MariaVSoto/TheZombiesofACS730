@@ -34,13 +34,8 @@ instance_type = "t2.small"
 key_name      = "zombieacs730"
 ami_id        = "ami-00a929b66ed6e0de6" # Amazon Linux 2023 AMI for us-east-1
 
-# SSH Key
-ssh_public_key = "ssh-rsa AAAAB3NZaC1yc2EAAAADAQABAAABAQDAaN8XWeSStmO8WSZxvYuYY0BHn7IgYtpYvXtAvhcgiBuWOSi61LPjDBF5fJlTOtUhb+nXBDv/9BxygONSEvMXwHfDdZnQtuD6WMJPCNQFkTCvqd/B+IxNDwpzJ8HWPz7W1wK0N0A4UrhBKvVNP3O4lY2raOY3GeitjZDvDz3l3J9bJt7zXxfEGTKnF2xcXWwSy88KE3ojoXYYwVR4HjfOGmhIO9YKUcFOzqHr3Y9pDyatX7s1eLAyXo0fwrWYWN+kf0vdAGpsSzFjbTtLmgER2t0nwY8J4kkbDhrIoZALFxw0YyApXYQ/5EGcF0RgrDE5IUa9vK9BhbmhazPpIisp ec2-user@ip-172-31-6-3.ec2.internal"
-
-
 # S3 Settings
-s3_bucket          = "thezombiesofacs730"
-access_logs_bucket = "thezombiesofacs730-logs" # Added for ALB access logs
+s3_bucket = "zombies-acs730"
 
 # Auto Scaling Group Settings (for Webserver 1 and 3)
 asg_min_size         = 2 # Minimum one instance each for Webserver 1 and 3

@@ -7,12 +7,6 @@ resource "aws_lb" "alb" {
 
   enable_deletion_protection = var.alb_enable_deletion_protection
 
-  access_logs {
-    bucket  = var.access_logs_bucket
-    prefix  = "alb-logs"
-    enabled = true
-  }
-
   tags = merge(var.common_tags, {
     Name = var.alb_name != "" ? var.alb_name : "${var.team_name}-${var.environment}-alb"
   })
@@ -48,11 +42,22 @@ resource "aws_lb_listener" "http" {
   protocol          = "HTTP"
 
   default_action {
-    type = "redirect"
-    redirect {
-      port        = "443"
-      protocol    = "HTTPS"
-      status_code = "HTTP_301"
+    type = var.enable_https ? "redirect" : "forward"
+    dynamic "redirect" {
+      for_each = var.enable_https ? [1] : []
+      content {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
+    }
+    dynamic "forward" {
+      for_each = var.enable_https ? [] : [1]
+      content {
+        target_group {
+          arn = aws_lb_target_group.web_tg.arn
+        }
+      }
     }
   }
 }
