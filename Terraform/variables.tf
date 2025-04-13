@@ -49,6 +49,11 @@ variable "key_name" {
   type        = string
 }
 
+variable "public_key" {
+  description = "SSH public key"
+  type        = string
+}
+
 variable "asg_min_size" {
   description = "Minimum number of instances in Auto Scaling Group"
   type        = number
