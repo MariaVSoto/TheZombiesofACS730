@@ -132,19 +132,11 @@ resource "aws_security_group" "bastion" {
   vpc_id      = aws_vpc.vpc.id
 
   ingress {
-    description = "SSH from Internet"
+    description = "SSH from Internet (TODO: Restrict to specific IP range)"
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    description = "HTTP from ALB"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    security_groups = [aws_security_group.alb.id]
+    cidr_blocks = ["0.0.0.0/0"]  # Temporarily open to all
   }
 
   egress {
@@ -172,6 +164,14 @@ resource "aws_security_group" "alb" {
     description = "HTTP from Internet"
     from_port   = 80
     to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "HTTPS from Internet"
+    from_port   = 443
+    to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }

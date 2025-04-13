@@ -81,3 +81,29 @@ variable "team_name" {
   description = "Name of the team for resource naming"
   type        = string
 }
+
+variable "bastion_subnet_index" {
+  description = "Index of the public subnet for bastion host"
+  type        = number
+}
+
+variable "web4_subnet_index" {
+  description = "Index of the public subnet for webserver4"
+  type        = number
+}
+
+variable "web5_subnet_index" {
+  description = "Index of the private subnet for VM5"
+  type        = number
+}
+
+variable "vm6_subnet_index" {
+  description = "Index of the private subnet for VM6"
+  type        = number
+}
+
+variable "additional_tags" {
+  description = "Additional tags to be applied to all resources"
+  type        = map(string)
+  default     = {}
+}
