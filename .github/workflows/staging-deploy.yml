@@ -12,7 +12,7 @@ on:
           - staging
           - production
   push:
-    branches: [ staging, Kevin ]
+    branches: [ staging, prod ]
     paths:
       - 'Terraform/**'
       - 'Ansible/**'
@@ -32,7 +32,7 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-      TF_WORKSPACE: ${{ github.event.inputs.environment || 'staging' }}
+      TF_DIR: Terraform/${{ github.event.inputs.environment || 'staging' }}
       TF_VAR_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
 
     steps:
@@ -49,12 +49,12 @@ jobs:
         id: fmt
         run: terraform fmt -check -recursive
         continue-on-error: true
-        working-directory: ./Terraform
+        working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Init
         id: init
         run: terraform init
-        working-directory: ./Terraform
+        working-directory: ${{ env.TF_DIR }}
 
       - name: Select Terraform Workspace
         run: |
@@ -64,19 +64,19 @@ jobs:
           unset TF_WORKSPACE
           terraform workspace select ${{ github.event.inputs.environment || 'staging' }} || \
           terraform workspace new ${{ github.event.inputs.environment || 'staging' }}
-        working-directory: ./Terraform
+        working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Validate
         id: validate
         run: terraform validate -no-color
-        working-directory: ./Terraform
+        working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Plan
         id: plan
         run: |
           terraform plan -input=false -no-color -out tf.plan
           terraform show -no-color tf.plan > plan.txt
-        working-directory: ./Terraform 
+        working-directory: ${{ env.TF_DIR }} 
         continue-on-error: true
 
       - name: Post Plan to PR
@@ -85,7 +85,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const plan = fs.readFileSync('Terraform/plan.txt', 'utf8');
+            const plan = fs.readFileSync(`${process.env.TF_DIR}/plan.txt`, 'utf8');
             const maxLength = 65536;
             const chunks = [];
             
@@ -103,17 +103,17 @@ jobs:
 
       - name: Terraform Apply
         if: |
-          (github.ref == 'refs/heads/staging' && github.event_name == 'push') ||
-          (github.event_name == 'workflow_dispatch')
+          (github.ref == 'refs/heads/staging' && github.event.inputs.environment == 'staging') ||
+          (github.ref == 'refs/heads/prod' && github.event.inputs.environment == 'production')
         run: terraform apply -input=false -auto-approve tf.plan
-        working-directory: ./Terraform
+        working-directory: ${{ env.TF_DIR }}
 
       - name: Verify Deployment
         if: success()
         run: |
           echo "Verifying infrastructure deployment..."
           terraform output -json > tf_output.json
-        working-directory: ./Terraform
+        working-directory: ${{ env.TF_DIR }}
 
   ansible:
     needs: terraform
@@ -168,7 +168,7 @@ jobs:
         if: success()
         run: |
           echo "Verifying web services..."
-          # 这里可以添加检查 web 服务是否正常运行的命令
+          curl -f http://<web-server-ip>/health || exit 1
 
   notify:
     needs: [terraform, ansible]
@@ -201,4 +201,3 @@ jobs:
                 body: message
               });
             }
-        
