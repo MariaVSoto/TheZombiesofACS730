@@ -57,7 +57,13 @@ jobs:
 
       - name: Select Terraform Workspace
         run: |
-          terraform workspace select $TF_WORKSPACE || terraform workspace new $TF_WORKSPACE
+          if terraform workspace list | grep -q "$TF_WORKSPACE"; then
+            echo "Workspace $TF_WORKSPACE already exists, selecting it"
+            terraform workspace select $TF_WORKSPACE
+          else
+            echo "Creating new workspace $TF_WORKSPACE"
+            terraform workspace new $TF_WORKSPACE
+          fi
         working-directory: ./Terraform
 
       - name: Terraform Validate
