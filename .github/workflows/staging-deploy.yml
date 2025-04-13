@@ -201,3 +201,18 @@ jobs:
                 body: message
               });
             }
+            
+  promote-to-prod:
+    name: Promote to Production
+    needs: [terraform, ansible]
+    if: ${{ github.ref == 'refs/heads/staging' && success() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Production Workflow
+        uses: benc-uk/workflow-dispatch@v1
+        with:
+          workflow: "Infrastructure Deployment"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: prod
+          inputs: |
+            environment: production
