@@ -115,6 +115,12 @@ jobs:
           terraform output -json > tf_output.json
         working-directory: ${{ env.TF_DIR }}
 
+      - name: Export Webserver IP from Terraform Outputs
+        id: extract_outputs
+        run: |
+          echo "WEB_IP=$(jq -r .webserver4_public_ip.value tf_output.json)" >> $GITHUB_ENV
+        working-directory: ${{ env.TF_DIR }}
+
   ansible:
     needs: terraform
     name: "Ansible Configuration"
