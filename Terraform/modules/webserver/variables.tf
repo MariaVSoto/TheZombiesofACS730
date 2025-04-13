@@ -3,14 +3,10 @@ variable "environment" {
   type        = string
 }
 
-variable "team_name" {
-  description = "Name of the team"
-  type        = string
-}
-
 variable "common_tags" {
   description = "Common tags for all resources"
   type        = map(string)
+  default     = {}
 }
 
 variable "s3_bucket" {
@@ -19,17 +15,27 @@ variable "s3_bucket" {
 }
 
 variable "ami_id" {
-  description = "ID of the AMI to use for web servers"
+  description = "ID of the AMI to use for instances"
   type        = string
 }
 
 variable "instance_type" {
-  description = "Instance type for web servers"
+  description = "Instance type for all instances"
   type        = string
 }
 
-variable "web_security_group_id" {
-  description = "ID of the web security group"
+variable "vpc_id" {
+  description = "ID of the VPC"
+  type        = string
+}
+
+variable "bastion_sg_id" {
+  description = "ID of the bastion security group"
+  type        = string
+}
+
+variable "alb_security_group_id" {
+  description = "ID of the ALB security group"
   type        = string
 }
 
@@ -41,16 +47,19 @@ variable "key_name" {
 variable "asg_desired_capacity" {
   description = "Desired number of instances in ASG"
   type        = number
+  default     = 2
 }
 
 variable "asg_max_size" {
   description = "Maximum number of instances in ASG"
   type        = number
+  default     = 4
 }
 
 variable "asg_min_size" {
   description = "Minimum number of instances in ASG"
   type        = number
+  default     = 2
 }
 
 variable "target_group_arn" {
@@ -61,4 +70,14 @@ variable "target_group_arn" {
 variable "public_subnet_ids" {
   description = "List of public subnet IDs"
   type        = list(string)
-} 
+}
+
+variable "private_subnet_ids" {
+  description = "List of private subnet IDs"
+  type        = list(string)
+}
+
+variable "team_name" {
+  description = "Name of the team for resource naming"
+  type        = string
+}
