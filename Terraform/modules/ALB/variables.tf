@@ -58,8 +58,3 @@ variable "alb_enable_deletion_protection" {
   type        = bool
   default     = true
 }
-
-variable "access_logs_bucket" {
-  description = "S3 bucket for ALB access logs"
-  type        = string
-}
