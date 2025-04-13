@@ -12,7 +12,7 @@ resource "aws_lb" "alb" {
   })
 
   lifecycle {
-    create_before_destroy = true
+    create_before_destroy = false
   }
 }
 
@@ -40,7 +40,7 @@ resource "aws_lb_target_group" "web_tg" {
   })
 
   lifecycle {
-    create_before_destroy = true
+    create_before_destroy = false
   }
 }
 

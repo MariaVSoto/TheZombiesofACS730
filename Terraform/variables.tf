@@ -174,3 +174,8 @@ variable "bastion_subnet_index" {
   description = "Index of the subnet where the Bastion host will be deployed"
   type        = number
 }
+
+variable "admin_ip_cidr" {
+  description = "CIDR block for administrative access"
+  type        = string
+}
