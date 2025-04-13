@@ -23,6 +23,10 @@ override.tf.json
 .terraformrc
 terraform.rc
 
+# Exclude ALB module
+Terraform/modules/ALB/
+MODULES/alb/
+
 # MacOS files
 .DS_Store
 
