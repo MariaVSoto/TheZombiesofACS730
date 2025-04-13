@@ -48,6 +48,11 @@ variable "key_name" {
   description = "Name of the SSH key pair"
 }
 
+variable "public_key" {
+  description = "SSH public key"
+  type        = string
+}
+
 variable "asg_desired_capacity" {
   type        = number
   description = "Desired number of instances in the Auto Scaling Group"
