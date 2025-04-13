@@ -1,5 +1,5 @@
 # Environment Settings
-environment = "prod"
+environment = "dev"
 team_name   = "zombies"
 group_name  = "zombies"
 region      = "us-east-1"
@@ -58,7 +58,7 @@ managed_by   = "Terraform"
 common_tags = {
   Team        = "zombies"
   Project     = "ACS730"
-  Environment = "prod"
+  Environment = "dev"
   Terraform   = "true"
   CostCenter  = "ACS730-Project"
   Owner       = "Zombies Team"
