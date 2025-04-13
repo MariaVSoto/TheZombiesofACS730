@@ -75,10 +75,16 @@ jobs:
         id: plan
         run: |
           terraform plan -input=false -no-color -out=tf.plan
+          if [ -f tf.plan ]; then
+            echo "Plan generated successfully"
+          else
+            echo "Error: Plan file not generated"
+            exit 1
+          fi
           terraform show -no-color tf.plan > plan.txt
         working-directory: ${{ env.TF_DIR }} 
         continue-on-error: true
-
+        
       - name: Debug Plan File Existence
         run: |
           if [ -f tf.plan ]; then
