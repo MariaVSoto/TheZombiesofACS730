@@ -89,7 +89,6 @@ module "alb" {
 module "webserver" {
   source = "./modules/webserver"
 
-  environment           = var.environment
   team_name             = var.team_name
   vpc_id                = module.network.vpc_id
   public_subnet_ids     = module.network.public_subnet_ids
