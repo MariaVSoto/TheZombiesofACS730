@@ -6,10 +6,10 @@ on:
       environment:
         description: 'Environment to deploy to'
         required: true
-        default: 'production'
+        default: 'prod'
         type: choice
         options:
-          - production
+          - prod
   workflow_call:
     inputs:
       environment:
@@ -25,13 +25,13 @@ jobs:
   terraform:
     name: "Terraform Deployment"
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment || 'production' }}
+    environment: ${{ inputs.environment || 'prod' }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-      TF_DIR: Terraform/${{ inputs.environment || 'production' }}
+      TF_DIR: Terraform/${{ inputs.environment || 'prod' }}
       TF_VAR_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
 
     steps:
@@ -49,8 +49,8 @@ jobs:
 
       - name: Terraform Workspace
         run: |
-          terraform workspace select ${{ inputs.environment || 'production' }} || \
-          terraform workspace new ${{ inputs.environment || 'production' }}
+          terraform workspace select ${{ inputs.environment || 'prod' }} || \
+          terraform workspace new ${{ inputs.environment || 'prod' }}
         working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Validate
@@ -70,7 +70,7 @@ jobs:
     needs: terraform
     name: "Ansible Configuration"
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment || 'production' }}
+    environment: ${{ inputs.environment || 'prod' }}
     if: success()
 
     steps:
