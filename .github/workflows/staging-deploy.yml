@@ -97,7 +97,7 @@ jobs:
               await github.rest.issues.createComment({
                 ...context.repo,
                 issue_number: context.issue.number,
-                body: `### Terraform Plan (Part ${i + 1}/${chunks.length})\n\`\`\`\n${chunks[i]}\n\`\`\``
+                body: `### Terraform Plan (Part ${i + 1}/${chunks.length})\n\`\`\`\n${chunks[i]}\n\`\`\```
               });
             }
 
@@ -174,7 +174,7 @@ jobs:
         if: success()
         run: |
           echo "Verifying web services..."
-          curl -f http://<web-server-ip>/health || exit 1
+          curl -f http://$WEB_IP/health || exit 1
 
   notify:
     needs: [terraform, ansible]
