@@ -453,3 +453,8 @@ resource "aws_instance" "vm6" {
     Name = "${var.team_name}-webserver-private"
   })
 }
+
+resource "aws_key_pair" "key_name" {
+  key_name   = var.key_name
+  public_key = file("~/.ssh/${key.name}.pub")
+}
