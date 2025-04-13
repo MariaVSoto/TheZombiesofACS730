@@ -57,13 +57,19 @@ jobs:
 
       - name: Select Terraform Workspace
         run: |
-          if terraform workspace list | grep -q "$TF_WORKSPACE"; then
-            echo "Workspace $TF_WORKSPACE already exists, selecting it"
-            terraform workspace select $TF_WORKSPACE
+          # Desactivar temporalmente la variable de entorno
+          OLD_TF_WORKSPACE=$TF_WORKSPACE
+          unset TF_WORKSPACE
+          
+          if terraform workspace list | grep -q "^$OLD_TF_WORKSPACE\$"; then
+            echo "Selecting existing workspace: $OLD_TF_WORKSPACE"
+            terraform workspace select "$OLD_TF_WORKSPACE"
           else
-            echo "Creating new workspace $TF_WORKSPACE"
-            terraform workspace new $TF_WORKSPACE
+            echo "Creating new workspace: $OLD_TF_WORKSPACE"
+            terraform workspace new "$OLD_TF_WORKSPACE"
           fi
+          
+          export TF_WORKSPACE=$OLD_TF_WORKSPACE
         working-directory: ./Terraform
 
       - name: Terraform Validate
