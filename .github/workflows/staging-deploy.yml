@@ -33,6 +33,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
       TF_WORKSPACE: ${{ github.event.inputs.environment || 'staging' }}
+      TF_VAR_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
 
     steps:
       - name: Checkout
