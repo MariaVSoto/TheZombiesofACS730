@@ -454,7 +454,7 @@ resource "aws_instance" "vm6" {
   })
 }
 
-resource "aws_key_pair" "key_name" {
+resource "aws_key_pair" "deployer" {
   key_name   = var.key_name
-  public_key = file("~/.ssh/${key.name}.pub")
+  public_key = file("~/.ssh/${key_name}.pub")
 }
