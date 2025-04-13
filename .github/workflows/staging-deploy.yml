@@ -57,7 +57,12 @@ jobs:
 
       - name: Select Terraform Workspace
         run: |
-          terraform workspace select $TF_WORKSPACE || terraform workspace new $TF_WORKSPACE
+          echo "Current TF_WORKSPACE: $TF_WORKSPACE"
+          terraform workspace list
+          terraform workspace show
+          unset TF_WORKSPACE
+          terraform workspace select ${{ github.event.inputs.environment || 'staging' }} || \
+          terraform workspace new ${{ github.event.inputs.environment || 'staging' }}
         working-directory: ./Terraform
 
       - name: Terraform Validate
