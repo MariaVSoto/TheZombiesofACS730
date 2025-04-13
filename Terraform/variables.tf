@@ -49,11 +49,6 @@ variable "key_name" {
   type        = string
 }
 
-variable "ssh_public_key" {
-  description = "Public SSH key content for EC2 instances"
-  type        = string
-}
-
 variable "asg_min_size" {
   description = "Minimum number of instances in Auto Scaling Group"
   type        = number
@@ -78,12 +73,7 @@ variable "ami_id" {
 }
 
 variable "s3_bucket" {
-  description = "Name of the S3 bucket for web content and ALB logs"
-  type        = string
-}
-
-variable "admin_ip_cidr" {
-  description = "CIDR block for admin access to bastion host"
+  description = "Name of the S3 bucket for web content"
   type        = string
 }
 
@@ -118,7 +108,7 @@ variable "additional_tags" {
 }
 
 variable "common_tags" {
-  description = "Common tags to be applied to all resources"
+  description = "Common tags for all resources"
   type        = map(string)
   default     = {}
 }
@@ -134,10 +124,11 @@ variable "terraform_state_key" {
   type        = string
   default     = "terraform.tfstate"
 }
+
 variable "enable_https" {
-  description = "Whether to enable HTTPS listener for the ALB"
+  description = "Enable HTTPS for the application"
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "certificate_arn" {
@@ -162,11 +153,6 @@ variable "alb_enable_deletion_protection" {
   description = "Whether to enable deletion protection for the ALB"
   type        = bool
   default     = false
-}
-
-variable "access_logs_bucket" {
-  description = "Name of the S3 bucket for ALB access logs"
-  type        = string
 }
 
 variable "web4_subnet_index" {
