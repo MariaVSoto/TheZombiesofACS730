@@ -10,7 +10,7 @@ on:
         type: choice
         options:
           - staging
-          - production
+          - prod
   push:
     branches: [ staging, prod ]
     paths:
@@ -21,7 +21,7 @@ permissions:
   contents: read
   pull-requests: write
   issues: write
-  
+
 jobs:
   terraform:
     name: "Terraform Deployment"
@@ -104,7 +104,7 @@ jobs:
       - name: Terraform Apply
         if: |
           (github.ref == 'refs/heads/staging' && github.event.inputs.environment == 'staging') ||
-          (github.ref == 'refs/heads/prod' && github.event.inputs.environment == 'production')
+          (github.ref == 'refs/heads/prod' && github.event.inputs.environment == 'prod')
         run: terraform apply -input=false -auto-approve tf.plan
         working-directory: ${{ env.TF_DIR }}
 
@@ -201,7 +201,7 @@ jobs:
                 body: message
               });
             }
-            
+
   promote-to-prod:
     name: Promote to Production
     needs: [terraform, ansible]
@@ -215,4 +215,4 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: prod
           inputs: |
-            environment: production
+            environment: prod
