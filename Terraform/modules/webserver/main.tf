@@ -79,7 +79,7 @@ resource "aws_launch_template" "asg_lt" {
               yum install -y httpd
               systemctl start httpd
               systemctl enable httpd
-              echo "<h1>Hello from ASG Instance $(hostname -f)</h1>" > /var/www/html/index.html
+              echo "<h1>Hello from Webserver $(curl -s http://169.254.169.254/latest/meta-data/instance-id)</h1>" > /var/www/html/index.html
               EOF
   )
 
@@ -92,12 +92,12 @@ resource "aws_launch_template" "asg_lt" {
   tag_specifications {
     resource_type = "instance"
     tags = merge(var.common_tags, var.additional_tags, {
-      Name = "${var.environment}-asg-instance"
+      Name = "${var.environment}-webserver-asg"  # This will be webserver1 and webserver3
     })
   }
 }
 
-# Launch Template for Bastion Host (Webserver 2)
+# Launch Template for Webserver 2 (Bastion Host)
 resource "aws_launch_template" "bastion_lt" {
   name_prefix   = "${var.environment}-bastion-lt"
   image_id      = var.ami_id
@@ -110,7 +110,7 @@ resource "aws_launch_template" "bastion_lt" {
               yum install -y httpd
               systemctl start httpd
               systemctl enable httpd
-              echo "<h1>Hello from Bastion Host</h1>" > /var/www/html/index.html
+              echo "<h1>Hello from Webserver 2 (Bastion Host)</h1>" > /var/www/html/index.html
               EOF
   )
 
@@ -123,7 +123,7 @@ resource "aws_launch_template" "bastion_lt" {
   tag_specifications {
     resource_type = "instance"
     tags = merge(var.common_tags, var.additional_tags, {
-      Name = "${var.environment}-bastion-host"
+      Name = "${var.environment}-webserver2"  # This is webserver2
     })
   }
 }
@@ -159,7 +159,7 @@ resource "aws_launch_template" "webserver4_lt" {
   }
 }
 
-# Launch Template for Private Instances
+# Launch Template for Webserver 5 and 6
 resource "aws_launch_template" "private_lt" {
   name_prefix   = "${var.environment}-private-lt"
   image_id      = var.ami_id
@@ -175,7 +175,7 @@ resource "aws_launch_template" "private_lt" {
   tag_specifications {
     resource_type = "instance"
     tags = merge(var.common_tags, var.additional_tags, {
-      Name = "${var.environment}-private-instance"
+      Name = "${var.environment}-webserver-private"  # This will be webserver5 and webserver6
     })
   }
 }
@@ -199,7 +199,7 @@ resource "aws_autoscaling_group" "web_asg" {
 
   tag {
     key                 = "Name"
-    value              = "${var.environment}-asg-instance"
+    value              = "${var.environment}-webserver-asg"
     propagate_at_launch = true
   }
 }
@@ -213,7 +213,7 @@ resource "aws_instance" "bastion" {
   subnet_id = var.public_subnet_ids[var.bastion_subnet_index]
 
   tags = merge(var.common_tags, var.additional_tags, {
-    Name = "${var.environment}-bastion-host"
+    Name = "${var.environment}-webserver2"
   })
 }
 
@@ -239,7 +239,7 @@ resource "aws_instance" "vm5" {
   subnet_id = var.private_subnet_ids[var.web5_subnet_index]
 
   tags = merge(var.common_tags, var.additional_tags, {
-    Name = "${var.environment}-vm5"
+    Name = "${var.environment}-webserver-private"
   })
 }
 
@@ -252,6 +252,6 @@ resource "aws_instance" "vm6" {
   subnet_id = var.private_subnet_ids[var.vm6_subnet_index]
 
   tags = merge(var.common_tags, var.additional_tags, {
-    Name = "${var.environment}-vm6"
+    Name = "${var.environment}-webserver-private"
   })
 }
