@@ -42,7 +42,4 @@ output "vm6_private_ip" {
   description = "Private IP of VM6"
   value       = aws_instance.vm6.private_ip
 } 
-output "webserver4_public_ip" {
-  description = "Public IP of webserver4"
-  value       = aws_instance.webserver4.public_ip
-}
+
