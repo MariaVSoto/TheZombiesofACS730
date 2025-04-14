@@ -13,10 +13,10 @@ keyed_groups:
     prefix: az
 
 hostnames:
-  - private-ip-address
+  - public-ip-address
   - tag:Name
   - dns-name
   - private-dns-name
 
 compose:
-  ansible_host: private_ip_address 
+  ansible_host: public_ip_address
