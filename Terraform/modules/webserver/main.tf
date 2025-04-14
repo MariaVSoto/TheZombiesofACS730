@@ -196,7 +196,8 @@ resource "aws_launch_template" "asg_lt" {
     echo "Private IP: $PRIVATE_IP" >> /var/log/user-data.log
     echo "ASG Name: $ASG_NAME" >> /var/log/user-data.log
     EOF
-)
+  )
+}
 
 # ========================
 # Launch Template for Webserver 2 (Bastion Host)
@@ -212,7 +213,7 @@ resource "aws_launch_template" "bastion_lt" {
 
   tag_specifications {
     resource_type = "instance"
-    tags          = merge(var.common_tags, var.additional_tags, {
+    tags = merge(var.common_tags, var.additional_tags, {
       Name = "${var.team_name}-webserver2"
     })
   }
@@ -284,7 +285,7 @@ resource "aws_launch_template" "bastion_lt" {
     </html>
     HTML
     EOF
-)
+  )
 }
 
 # ========================
@@ -377,7 +378,7 @@ resource "aws_launch_template" "webserver4_lt" {
     echo "Instance ID: $INSTANCE_ID" >> /var/log/user-data.log
     echo "Private IP: $PRIVATE_IP" >> /var/log/user-data.log
     EOF
-)
+  )
 }
 
 # ========================
@@ -405,9 +406,9 @@ resource "aws_launch_template" "private_lt" {
 resource "aws_autoscaling_group" "web_asg" {
   name                = "${var.team_name}-web-asg"
   desired_capacity    = var.asg_desired_capacity
-  max_size           = var.asg_max_size
-  min_size           = var.asg_min_size
-  target_group_arns  = [var.target_group_arn]
+  max_size            = var.asg_max_size
+  min_size            = var.asg_min_size
+  target_group_arns   = [var.target_group_arn]
   vpc_zone_identifier = [
     var.public_subnet_ids[0],  # Webserver 1 subnet
     var.public_subnet_ids[2]   # Webserver 3 subnet
@@ -420,7 +421,7 @@ resource "aws_autoscaling_group" "web_asg" {
 
   tag {
     key                 = "Name"
-    value              = "${var.team_name}-webserver-asg"
+    value               = "${var.team_name}-webserver-asg"
     propagate_at_launch = true
   }
 }
