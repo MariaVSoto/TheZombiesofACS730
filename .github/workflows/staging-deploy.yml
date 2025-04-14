@@ -21,7 +21,6 @@ permissions:
   contents: read
   pull-requests: write
   issues: write
-  id-token: write  # Necesario para OIDC con AWS
 
 jobs:
   terraform:
@@ -29,7 +28,9 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/prod' && 'prod') || 'staging' }}
     env:
-      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
       TF_VAR_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
     defaults:
       run:
@@ -39,25 +40,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ env.AWS_REGION }}
-
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.1.9
-          terraform_wrapper: false
 
       - name: Terraform Format
         run: terraform fmt -check -recursive || true
 
       - name: Terraform Init
-        run: terraform init -input=false
+        run: terraform init
 
       - name: Select Terraform Workspace
         run: |
@@ -73,7 +65,7 @@ jobs:
       - name: Debug Plan File Existence
         run: |
           if [ -f tf.plan ]; then
-            echo "Plan file exists with size: $(du -h tf.plan | cut -f1)"
+            echo "Plan file exists!"
           else
             echo "Plan file does not exist!"
             exit 1
@@ -85,12 +77,6 @@ jobs:
           (github.ref == 'refs/heads/prod' && github.event.inputs.environment == 'prod')
         run: terraform apply -input=false -auto-approve tf.plan
 
-      - name: Get Terraform Outputs
-        id: tf-outputs
-        run: |
-          echo "bastion_ip=$(terraform output -raw bastion_public_ip)" >> $GITHUB_OUTPUT
-          echo "webserver_ips=$(terraform output -json webserver_private_ips)" >> $GITHUB_OUTPUT
-
   ansible:
     needs: terraform
     name: "Ansible Configuration"
@@ -101,8 +87,6 @@ jobs:
     env:
       ANSIBLE_HOST_KEY_CHECKING: "False"
       ANSIBLE_SSH_RETRIES: "5"
-      ANSIBLE_CONFIG: "./Ansible/ansible.cfg"
-      AWS_REGION: "us-east-1"
 
     steps:
       - name: Checkout Repository
@@ -119,88 +103,35 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: us-east-1
 
       - name: Setup SSH Configuration
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/zombies-key
           chmod 700 ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/zombies-key
           chmod 600 ~/.ssh/zombies-key
-          echo -e "Host *\n  StrictHostKeyChecking no\n  UserKnownHostsFile /dev/null\n  IdentityFile ~/.ssh/zombies-key" > ~/.ssh/config
-          echo "=== SSH Config ==="
-          cat ~/.ssh/config
-          echo "=== Key Content (first 20 chars) ==="
-          head -c 20 ~/.ssh/zombies-key
+          echo "StrictHostKeyChecking no" > ~/.ssh/config
+          echo "UserKnownHostsFile /dev/null" >> ~/.ssh/config
 
-      - name: Install Dependencies
+      - name: Install Ansible and dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install --no-cache-dir ansible-core==2.14.5 boto3==1.28.57 botocore==1.31.57
-          ansible-galaxy collection install --force amazon.aws:5.0.0 community.aws:4.1.0
-
-      - name: Create Dynamic Inventory
-        working-directory: ./Ansible
-        run: |
-          cat > inventory/aws_ec2.yml <<EOL
-          plugin: aws_ec2
-          regions:
-            - ${{ env.AWS_REGION }}
-          filters:
-            tag:Environment: ${{ github.event.inputs.environment || 'staging' }}
-          keyed_groups:
-            - key: tags.Name
-              prefix: tag_Name_
-          hostnames:
-            - public_ip_address
-          compose:
-            ansible_user: ec2-user
-          EOL
-          
-          echo "=== Inventory File Content ==="
-          cat inventory/aws_ec2.yml
+          pip install ansible boto3 botocore
+          ansible-galaxy collection install amazon.aws
 
       - name: Wait for EC2 Instances
-        working-directory: ./Ansible
-        run: |
-          echo "Waiting for instances to be ready..."
-          aws ec2 wait instance-status-ok \
-            --region ${{ env.AWS_REGION }} \
-            --filters "Name=tag:Environment,Values=${{ github.event.inputs.environment || 'staging' }}" \
-            --query "Reservations[*].Instances[*].InstanceId" \
-            --output text
-          
-          echo "Checking SSH connectivity..."
-          for ip in $(aws ec2 describe-instances \
-            --region ${{ env.AWS_REGION }} \
-            --filters "Name=tag:Environment,Values=${{ github.event.inputs.environment || 'staging' }}" \
-            --query "Reservations[*].Instances[*].PublicIpAddress" \
-            --output text); do
-            
-            until nc -zv -w 5 $ip 22; do
-              echo "Waiting for SSH on $ip..."
-              sleep 10
-            done
-          done
+        run: sleep 90
 
-      - name: Verify Inventory
+      - name: Verify Dynamic Inventory
         working-directory: ./Ansible
         run: |
-          echo "=== Testing Inventory ==="
           ansible-inventory -i inventory/aws_ec2.yml --graph
           ansible-inventory -i inventory/aws_ec2.yml --list
-          
-          echo "=== Testing Connection ==="
-          ansible -i inventory/aws_ec2.yml all -m ping -vvv
 
       - name: Run Ansible Playbooks
         working-directory: ./Ansible
         run: |
-          echo "=== Current Directory ==="
-          pwd
-          ls -la
-          
-          echo "=== Running Playbooks ==="
           ansible-playbook -i inventory/aws_ec2.yml playbooks/bastion.yml -vvv
           ansible-playbook -i inventory/aws_ec2.yml playbooks/webserver.yml -vvv
 
@@ -216,38 +147,16 @@ jobs:
             const terraform_status = '${{ needs.terraform.result }}';
             const ansible_status = '${{ needs.ansible.result }}';
             const environment = '${{ github.event.inputs.environment || 'staging' }}';
-            
             let status = '✅ Deployment Successful!';
             if (terraform_status !== 'success' || ansible_status !== 'success') {
               status = '❌ Deployment Failed!';
             }
-            
-            const message = `
-            ### Deployment Status to ${environment}
-            - Terraform: ${terraform_status}
-            - Ansible: ${ansible_status}
-            
-            ${status}
-            
-            [View Workflow Run](${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID})
-            `;
-            
+            const message = `### Deployment Status to ${environment}\n- Terraform: ${terraform_status}\n- Ansible: ${ansible_status}\n\n${status}`;
             if (context.eventName === 'pull_request') {
               await github.rest.issues.createComment({
                 ...context.repo,
                 issue_number: context.issue.number,
                 body: message
-              });
-            }
-            
-            // También enviar notificación a Slack si está configurado
-            if ('${{ secrets.SLACK_WEBHOOK_URL }}' !== '') {
-              await fetch('${{ secrets.SLACK_WEBHOOK_URL }}', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  text: message
-                })
               });
             }
 
@@ -263,4 +172,5 @@ jobs:
           workflow: "Infrastructure Deployment"
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: prod
-          inputs: '{"environment":"prod"}'
+          inputs: |
+            environment: prod
