@@ -4,8 +4,8 @@ variable "team_name" {
 }
 
 variable "region" {
-  type        = string
   description = "AWS region"
+  type        = string
 }
 
 variable "common_tags" {
@@ -46,6 +46,11 @@ variable "alb_security_group_id" {
 variable "key_name" {
   type        = string
   description = "Name of the SSH key pair"
+}
+
+variable "public_key" {
+  description = "SSH public key"
+  type        = string
 }
 
 variable "asg_desired_capacity" {
@@ -105,4 +110,10 @@ variable "additional_tags" {
   type        = map(string)
   description = "Additional tags to be applied to all resources"
   default     = {}
+}
+
+variable "admin_ip_cidr" {
+  description = "CIDR block for administrative access"
+  type        = string
+  default     = "0.0.0.0/0" # Consider restricting this to your IP
 }
