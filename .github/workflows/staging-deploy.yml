@@ -22,11 +22,14 @@ permissions:
   pull-requests: write
   issues: write
 
+env:
+  ENV_NAME: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/prod' && 'prod') || 'staging' }}
+
 jobs:
   terraform:
     name: "Terraform Deployment"
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment || (github.ref == 'refs/heads/prod' && 'prod') || 'staging' }}
+    environment: ${{ env.ENV_NAME }}
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -34,7 +37,7 @@ jobs:
       TF_VAR_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
     defaults:
       run:
-        working-directory: Terraform/${{ inputs.environment || (github.ref == 'refs/heads/prod' && 'prod') || 'staging' }}
+        working-directory: Terraform/${{ env.ENV_NAME }}
 
     steps:
       - name: Checkout
@@ -53,8 +56,8 @@ jobs:
 
       - name: Select Terraform Workspace
         run: |
-          terraform workspace select ${{ inputs.environment || 'staging' }} || \
-          terraform workspace new ${{ inputs.environment || 'staging' }}
+          terraform workspace select ${{ env.ENV_NAME }} || \
+          terraform workspace new ${{ env.ENV_NAME }}
 
       - name: Terraform Validate
         run: terraform validate -no-color
@@ -73,17 +76,17 @@ jobs:
 
       - name: Terraform Apply
         if: |
-          (github.ref == 'refs/heads/staging' && inputs.environment == 'staging') ||
-          (github.ref == 'refs/heads/prod' && inputs.environment == 'prod')
+          (github.ref == 'refs/heads/staging' && env.ENV_NAME == 'staging') ||
+          (github.ref == 'refs/heads/prod' && env.ENV_NAME == 'prod')
         run: terraform apply -input=false -auto-approve tf.plan
 
-ansible:
+  ansible:
     needs: terraform
     name: "Ansible Configuration"
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment || 'staging' }}
+    environment: ${{ env.ENV_NAME }}
     if: success()
-    
+
     env:
       ANSIBLE_HOST_KEY_CHECKING: "False"
       ANSIBLE_SSH_RETRIES: "5"
@@ -111,7 +114,6 @@ ansible:
           chmod 700 ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/zombies-key
           chmod 600 ~/.ssh/zombies-key
-          # Configura known_hosts dinámicamente para todas las instancias
           echo "StrictHostKeyChecking no" > ~/.ssh/config
           echo "UserKnownHostsFile /dev/null" >> ~/.ssh/config
 
@@ -133,28 +135,21 @@ ansible:
       - name: Run Ansible Playbooks
         working-directory: ./Ansible
         run: |
-          ansible-playbook \
-            -i inventory/aws_ec2.yml \
-            playbooks/bastion.yml \
-            -vvv
-          
-          ansible-playbook \
-            -i inventory/aws_ec2.yml \
-            playbooks/webserver.yml \
-            -vvv
+          ansible-playbook -i inventory/aws_ec2.yml playbooks/bastion.yml -vvv
+          ansible-playbook -i inventory/aws_ec2.yml playbooks/webserver.yml -vvv
 
-    notify:
-      needs: [terraform, ansible]
-      runs-on: ubuntu-latest
-      if: always()
-      steps:
+  notify:
+    needs: [terraform, ansible]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
       - name: Notify Deployment Status
         uses: actions/github-script@v6
         with:
           script: |
             const terraform_status = '${{ needs.terraform.result }}';
             const ansible_status = '${{ needs.ansible.result }}';
-            const environment = '${{ inputs.environment || 'staging' }}';
+            const environment = '${{ env.ENV_NAME }}';
             let status = '✅ Deployment Successful!';
             if (terraform_status !== 'success' || ansible_status !== 'success') {
               status = '❌ Deployment Failed!';
@@ -168,17 +163,17 @@ ansible:
               });
             }
 
-    promote-to-prod:
-      name: Promote to Production
-      needs: [terraform, ansible]
-      if: ${{ github.ref == 'refs/heads/staging' && success() }}
-      runs-on: ubuntu-latest
-      steps:
+  promote-to-prod:
+    name: Promote to Production
+    needs: [terraform, ansible]
+    if: ${{ github.ref == 'refs/heads/staging' && success() }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Trigger Production Workflow
         uses: benc-uk/workflow-dispatch@v1
         with:
           workflow: "Infrastructure Deployment"
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: prod
-          inputs: |
+          inputs:
             environment: prod
