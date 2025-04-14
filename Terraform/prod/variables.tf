@@ -49,6 +49,11 @@ variable "key_name" {
   type        = string
 }
 
+variable "public_key" {
+  description = "SSH public key"
+  type        = string
+}
+
 variable "asg_min_size" {
   description = "Minimum number of instances in Auto Scaling Group"
   type        = number
@@ -173,4 +178,9 @@ variable "vm6_subnet_index" {
 variable "bastion_subnet_index" {
   description = "Index of the subnet where the Bastion host will be deployed"
   type        = number
+}
+
+variable "admin_ip_cidr" {
+  description = "CIDR block for administrative access"
+  type        = string
 }

@@ -62,6 +62,7 @@ resource "aws_lb_listener" "http" {
   }
 }
 
+
 resource "aws_lb_listener" "https" {
   count             = var.enable_https ? 1 : 0
   load_balancer_arn = aws_lb.alb.arn
@@ -75,3 +76,5 @@ resource "aws_lb_listener" "https" {
     target_group_arn = aws_lb_target_group.web_tg.arn
   }
 }
+
+###

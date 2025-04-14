@@ -1,43 +1,87 @@
-name: Terraform Security
+name: Terraform Security Check
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, staging, Kevin ]
+    paths:
+      - 'Terraform/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ main, staging ]
+    paths:
+      - 'Terraform/**'
 
 jobs:
-  tfsec_tflint_staging:
-    name: Run tfsec sarif report
+  security_checks:
+    name: Security Checks
     runs-on: ubuntu-latest
     permissions:
       actions: read
       contents: read
       security-events: write
+      pull-requests: write
 
     steps:
       - name: Clone repo
         uses: actions/checkout@v3
-      
-      - uses: terraform-linters/setup-tflint@v2
-        name: Setup TFLint
-        with:
-           tflint_version: v0.38.1
-           
-      - name: Show version
-        run: tflint --version
 
-      - name: Init TFLint
-        run: tflint --init
-        working-directory: ./Terraform
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v2
+        with:
+          tflint_version: v0.38.1
+
+      - name: Setup Checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: Terraform
+          quiet: true
+          soft_fail: true
 
       - name: Run TFLint
-        run: tflint -f compact
+        run: |
+          tflint --init
+          tflint -f compact
         working-directory: ./Terraform
 
-      - name: Run tfsec
-        uses: aquasecurity/tfsec-sarif-action@9a83b5c3524f825c020e356335855741fd02745f
+      - name: Run tfsec with SARIF output
+        uses: aquasecurity/tfsec-sarif-action@v0.1.4
+        with:
+          working_directory: Terraform
+          sarif_file: tfsec.sarif
+          soft_fail: true
+
+      - name: Run Terrascan
+        uses: tenable/terrascan-action@main
+        with:
+          iac_type: 'terraform'
+          iac_version: 'v14'
+          policy_type: 'aws'
+          only_warn: true
+          sarif_upload: true
+          working_directory: Terraform
+
+      - name: Upload SARIF files
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
         with:
           sarif_file: tfsec.sarif
 
-      - name: Upload SARIF file
-        uses: github/codeql-action/upload-sarif@v2
+      - name: Notify on Failure
+        if: failure()
+        uses: actions/github-script@v6
         with:
-          # Path to SARIF file relative to the root of the repository <>
-          sarif_file: tfsec.sarif
+          script: |
+            const { repo, owner } = context.repo;
+            const run_id = context.runId;
+            const run_url = `https://github.com/${owner}/${repo}/actions/runs/${run_id}`;
+            const message = `❌ Security checks failed in ${context.workflow}! Check the logs at ${run_url}`;
+            
+            if (context.eventName === 'pull_request') {
+              github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: context.issue.number,
+                body: message
+              });
+            }

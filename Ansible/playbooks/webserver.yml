@@ -1,0 +1,61 @@
+---
+- name: Configure Web Servers
+  hosts: tag_Name_prod_webserver3,tag_Name_prod_webserver4,tag_Name_prod_webserver5
+  become: yes
+  vars:
+    s3_bucket: "zombies-acs730"
+    team_name: "zombies"
+
+  tasks:
+    - name: Update all packages
+      yum:
+        name: '*'
+        state: latest
+        update_only: yes
+
+    - name: Install required packages
+      yum:
+        name:
+          - httpd
+          - awscli
+        state: present
+
+    - name: Start and enable Apache service
+      service:
+        name: httpd
+        state: started
+        enabled: yes
+
+    - name: Get instance ID from EC2 metadata
+      uri:
+        url: http://169.254.169.254/latest/meta-data/instance-id
+        return_content: yes
+      register: instance_id
+
+    - name: Get instance tags
+      amazon.aws.ec2_tag_info:
+        region: us-east-1
+        resource_id: "{{ instance_id.content }}"
+      register: instance_tags
+
+    - name: Extract webserver ID from Name tag
+      set_fact:
+        webserver_id: "{{ instance_tags.tags.Name | regex_search('webserver(\\d+)', '\\1') | first }}"
+
+    - name: Copy image from S3
+      command: "aws s3 cp s3://{{ s3_bucket }}/web-content/webserver{{ webserver_id }}.jpg /var/www/html/"
+      args:
+        creates: "/var/www/html/webserver{{ webserver_id }}.jpg"
+
+    - name: Get instance private IP
+      set_fact:
+        private_ip: "{{ ansible_host }}"
+
+    - name: Create index.html
+      template:
+        src: templates/index.html.j2
+        dest: /var/www/html/index.html
+        mode: '0644'
+      vars:
+        hostname: "{{ ansible_hostname }}"
+        ip_address: "{{ private_ip }}" 
