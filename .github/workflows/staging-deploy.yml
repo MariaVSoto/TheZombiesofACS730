@@ -175,5 +175,5 @@ jobs:
           workflow: "Infrastructure Deployment"
           token: ${{ secrets.GITHUB_TOKEN }}
           ref: prod
-          inputs:
+          inputs: |
             environment: prod
