@@ -81,18 +81,18 @@ jobs:
 
       - name: Check Required Secrets
         run: |
-          required_secrets=(
-            "AWS_ACCESS_KEY_ID"
-            "AWS_SECRET_ACCESS_KEY"
-            "SSH_PUBLIC_KEY"
-          )
-          
-          for secret in "${required_secrets[@]}"; do
-            if [ -z "${secrets[$secret]}" ]; then
-              echo "::error::Required secret $secret is not set"
-              exit 1
-            fi
-          done
+          if [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]; then
+            echo "::error::AWS_ACCESS_KEY_ID is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ]; then
+            echo "::error::AWS_SECRET_ACCESS_KEY is not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.SSH_PUBLIC_KEY }}" ]; then
+            echo "::error::SSH_PUBLIC_KEY is not set"
+            exit 1
+          fi
 
   terraform:
     needs: [pre_deployment_check]
