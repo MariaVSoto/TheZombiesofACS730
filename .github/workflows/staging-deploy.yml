@@ -22,17 +22,20 @@ permissions:
   pull-requests: write
   issues: write
 
+env:
+  DEPLOY_ENV: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/prod' && 'prod') || 'staging' }}
+
 jobs:
   terraform:
     name: "Terraform Deployment"
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
+    environment: ${{ env.DEPLOY_ENV }}
     env:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-      TF_DIR: Terraform/${{ github.event.inputs.environment || 'staging' }}
+      TF_DIR: Terraform/${{ env.DEPLOY_ENV }}
       TF_VAR_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
 
     steps:
@@ -57,8 +60,8 @@ jobs:
       - name: Select Terraform Workspace
         run: |
           unset TF_WORKSPACE
-          terraform workspace select ${{ github.event.inputs.environment || 'staging' }} || \
-          terraform workspace new ${{ github.event.inputs.environment || 'staging' }}
+          terraform workspace select ${{ env.DEPLOY_ENV }} || \
+          terraform workspace new ${{ env.DEPLOY_ENV }}
         working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Validate
@@ -102,8 +105,8 @@ jobs:
 
       - name: Terraform Apply
         if: |
-          (github.ref == 'refs/heads/staging' && github.event.inputs.environment == 'staging') ||
-          (github.ref == 'refs/heads/prod' && github.event.inputs.environment == 'prod')
+          (github.ref == 'refs/heads/staging' && env.DEPLOY_ENV == 'staging') ||
+          (github.ref == 'refs/heads/prod' && env.DEPLOY_ENV == 'prod')
         run: terraform apply -input=false -auto-approve tf.plan
         working-directory: ${{ env.TF_DIR }}
 
@@ -121,7 +124,7 @@ jobs:
     needs: terraform
     name: "Ansible Configuration"
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
+    environment: ${{ env.DEPLOY_ENV }}
     if: success()
 
     steps:
@@ -175,7 +178,7 @@ jobs:
           script: |
             const terraform_status = '${{ needs.terraform.result }}';
             const ansible_status = '${{ needs.ansible.result }}';
-            const environment = '${{ github.event.inputs.environment || 'staging' }}';
+            const environment = '${{ env.DEPLOY_ENV }}';
             let status = '✅ Deployment Successful!';
             if (terraform_status !== 'success' || ansible_status !== 'success') {
               status = '❌ Deployment Failed!';
