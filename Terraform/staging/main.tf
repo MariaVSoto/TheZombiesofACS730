@@ -54,7 +54,7 @@ module "webserver" {
   bastion_sg_id         = module.network.bastion_security_group_id
   s3_bucket             = var.s3_bucket
   region                = var.region
-  cidr_block              = module.network.cidr_block
+  vpc_cidr_block         = module.network.cidr_block
   
   bastion_subnet_index = var.bastion_subnet_index
   web4_subnet_index    = var.web4_subnet_index
