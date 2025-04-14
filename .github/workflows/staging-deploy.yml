@@ -41,6 +41,7 @@ on:
 
 permissions:
   contents: read
+  secrets: read
   pull-requests: write
   issues: write
   id-token: write
