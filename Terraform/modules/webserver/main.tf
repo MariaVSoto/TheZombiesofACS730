@@ -467,7 +467,7 @@ resource "aws_instance" "vm5" {
   subnet_id = var.private_subnet_ids[var.web5_subnet_index]
 
   tags = merge(var.common_tags, var.additional_tags, {
-    Name = "${var.team_name}-webserver-private"
+    Name = "${var.team_name}-webserver-private5"
   })
 }
 
@@ -482,7 +482,7 @@ resource "aws_instance" "vm6" {
   subnet_id = var.private_subnet_ids[var.vm6_subnet_index]
 
   tags = merge(var.common_tags, var.additional_tags, {
-    Name = "${var.team_name}-webserver-private"
+    Name = "${var.team_name}-webserver-private6"
   })
 }
 
