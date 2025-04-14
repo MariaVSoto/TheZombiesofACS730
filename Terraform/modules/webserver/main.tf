@@ -17,11 +17,11 @@ resource "aws_security_group" "web_sg" {
   }
 
   ingress {
-    description     = "Allow SSH from bastion host"
+    description     = "Allow SSH from within VPC"
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
-    security_groups = [var.vpc_cidr_block] 
+    cidr_blocks = [var.vpc_cidr_block] 
   }
 
   egress {
