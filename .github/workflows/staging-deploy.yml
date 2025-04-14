@@ -11,104 +11,30 @@ on:
         options:
           - staging
           - prod
-      deploy_type:
-        description: 'Type of deployment'
-        required: true
-        default: 'terraform'
-        type: choice
-        options:
-          - terraform
-          - ansible
-          - full
-      confirm_deployment:
-        description: 'Confirm deployment (type YES to confirm)'
-        required: true
-        type: string
-        default: 'NO'
-  pull_request:
-    types: [closed]
-    branches: [ staging, prod ]
-    paths:
-      - 'Terraform/**'
-      - 'Ansible/**'
-      - '.github/workflows/**'
   push:
     branches: [ staging, prod ]
     paths:
       - 'Terraform/**'
       - 'Ansible/**'
-      - '.github/workflows/**'
 
 permissions:
   contents: read
   pull-requests: write
   issues: write
-  id-token: write
-
-env:
-  MAX_RETRY_ATTEMPTS: 3
-  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
 jobs:
-  pre_deployment_check:
-    name: "Pre-deployment Validation"
-    runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'workflow_dispatch' && 
-      github.event.inputs.confirm_deployment == 'YES' ||
-      github.event_name == 'pull_request' && 
-      github.event.pull_request.merged == true
-    steps:
-      - name: Validate Deployment Confirmation
-        run: |
-          if [ "${{ github.event.inputs.confirm_deployment }}" != "YES" ] && [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "::error::Deployment not confirmed. Please set confirm_deployment to 'YES'"
-            exit 1
-          fi
-
-      - name: Environment Check
-        run: |
-          if [ "${{ github.event.inputs.environment }}" = "prod" ] || [ "${{ github.ref }}" = "refs/heads/prod" ]; then
-            echo "⚠️ PRODUCTION DEPLOYMENT DETECTED ⚠️"
-            echo "Please ensure you have:"
-            echo "1. Tested in staging"
-            echo "2. Reviewed all changes"
-            echo "3. Notified relevant team members"
-            echo "4. Scheduled deployment window"
-            echo "5. Backup plan ready"
-            sleep 10
-          fi
-
-      - name: Check Required Secrets
-        run: |
-          required_secrets=(
-            "AWS_ACCESS_KEY_ID"
-            "AWS_SECRET_ACCESS_KEY"
-            "SSH_PUBLIC_KEY"
-          )
-          
-          for secret in "${required_secrets[@]}"; do
-            if [ -z "${secrets[$secret]}" ]; then
-              echo "::error::Required secret $secret is not set"
-              exit 1
-            fi
-          done
-
   terraform:
-    needs: [pre_deployment_check]
-    if: |
-      needs.pre_deployment_check.result == 'success' &&
-      (github.event.inputs.deploy_type == 'terraform' || github.event.inputs.deploy_type == 'full' || github.event_name == 'push')
     name: "Terraform Deployment"
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
+    environment: ${{ inputs.environment || (github.ref == 'refs/heads/prod' && 'prod') || 'staging' }}
     env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-      TF_DIR: Terraform/${{ github.event.inputs.environment || 'staging' }}
       TF_VAR_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+    defaults:
+      run:
+        working-directory: Terraform/${{ inputs.environment || (github.ref == 'refs/heads/prod' && 'prod') || 'staging' }}
 
     steps:
       - name: Checkout
@@ -117,136 +43,44 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.5.7
-          terraform_wrapper: true
+          terraform_version: 1.1.9
 
       - name: Terraform Format
-        id: fmt
-        run: terraform fmt -check -recursive
-        continue-on-error: true
-        working-directory: ${{ env.TF_DIR }}
+        run: terraform fmt -check -recursive || true
 
-      - name: Terraform Init with Retries
-        uses: nick-fields/retry@v2
-        with:
-          timeout_minutes: 10
-          max_attempts: ${{ env.MAX_RETRY_ATTEMPTS }}
-          command: |
-            cd ${{ env.TF_DIR }}
-            terraform init || {
-              echo "::error::Terraform initialization failed"
-              exit 1
-            }
+      - name: Terraform Init
+        run: terraform init
 
       - name: Select Terraform Workspace
         run: |
-          cd ${{ env.TF_DIR }}
-          echo "Current TF_WORKSPACE: $TF_WORKSPACE"
-          terraform workspace list
-          terraform workspace show
-          unset TF_WORKSPACE
-          terraform workspace select ${{ github.event.inputs.environment || 'staging' }} || \
-          terraform workspace new ${{ github.event.inputs.environment || 'staging' }}
-
+          terraform workspace select ${{ inputs.environment || 'staging' }} || \
+          terraform workspace new ${{ inputs.environment || 'staging' }}
       - name: Terraform Validate
-        id: validate
-        run: |
-          cd ${{ env.TF_DIR }}
-          terraform validate -no-color || {
-            echo "::error::Terraform validation failed"
-            exit 1
-          }
+        run: terraform validate -no-color
 
       - name: Terraform Plan
-        id: plan
+        run: terraform plan -input=false -no-color -out=tf.plan
+
+      - name: Debug Plan File Existence
         run: |
-          cd ${{ env.TF_DIR }}
-          echo "Running terraform plan..."
-          terraform plan -input=false -no-color -out=tf.plan 2>&1 | tee plan_output.txt || {
-            echo "::error::Terraform plan failed"
+          if [ -f tf.plan ]; then
+            echo "Plan file exists!"
+          else
+            echo "Plan file does not exist!"
             exit 1
-          }
-          
-          # Extract important changes
-          echo "## Plan Summary" > plan_summary.md
-          echo "### Resource Changes" >> plan_summary.md
-          grep -E '^\s*[+\-~]\s' plan_output.txt >> plan_summary.md || true
-          
-          cat plan_summary.md
-
-      - name: Terraform Apply with Retries
+          fi
+      - name: Terraform Apply
         if: |
-          (github.ref == 'refs/heads/staging' && github.event.inputs.environment == 'staging') ||
-          (github.ref == 'refs/heads/prod' && github.event.inputs.environment == 'prod')
-        uses: nick-fields/retry@v2
-        with:
-          timeout_minutes: 30
-          max_attempts: ${{ env.MAX_RETRY_ATTEMPTS }}
-          command: |
-            cd ${{ env.TF_DIR }}
-            terraform apply -input=false -auto-approve tf.plan || {
-              echo "::error::Terraform apply failed"
-              exit 1
-            }
-
-      - name: Verify Deployment
-        if: success()
-        run: |
-          cd ${{ env.TF_DIR }}
-          echo "Verifying infrastructure deployment..."
-          terraform output -json > tf_output.json
-          
-          # Validate required outputs
-          required_outputs=("vpc_id" "public_subnet_ids" "private_subnet_ids")
-          for output in "${required_outputs[@]}"; do
-            if ! jq -e ".$output" tf_output.json > /dev/null; then
-              echo "::error::Required output '$output' is missing"
-              exit 1
-            fi
-          done
-          
-          # Health check for resources
-          echo "## Deployment Verification" > deployment_summary.md
-          echo "### Infrastructure Details" >> deployment_summary.md
-          echo "- Environment: ${{ github.event.inputs.environment }}" >> deployment_summary.md
-          echo "- VPC ID: $(jq -r .vpc_id.value tf_output.json)" >> deployment_summary.md
-          echo "- Public Subnets: $(jq '.public_subnet_ids.value | length' tf_output.json)" >> deployment_summary.md
-          echo "- Private Subnets: $(jq '.private_subnet_ids.value | length' tf_output.json)" >> deployment_summary.md
-          
-          cat deployment_summary.md
-
-      - name: Upload Deployment Summary
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: deployment-summary
-          path: ${{ env.TF_DIR }}/deployment_summary.md
-          retention-days: 30
-          compression-level: 6
-          overwrite: true
-          if-no-files-found: warn
-
-      - name: Upload Terraform Plan
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: terraform-plan
-          path: |
-            ${{ env.TF_DIR }}/tf.plan
-            ${{ env.TF_DIR }}/plan_output.txt
-          retention-days: 30
-          compression-level: 6
-          overwrite: true
-          if-no-files-found: warn
+          (github.ref == 'refs/heads/staging' && inputs.environment == 'staging') ||
+          (github.ref == 'refs/heads/prod' && inputs.environment == 'prod')
+        run: terraform apply -input=false -auto-approve tf.plan
 
   ansible:
-    needs: [terraform]
-    if: |
-      needs.terraform.result == 'success' &&
-      (github.event.inputs.deploy_type == 'ansible' || github.event.inputs.deploy_type == 'full' || github.event_name == 'push')
+    needs: terraform
     name: "Ansible Configuration"
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
+    environment: ${{ inputs.environment || 'staging' }}
+    if: success()
 
     steps:
       - name: Checkout Repository
@@ -257,11 +91,6 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Ansible and Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install ansible boto3 botocore requests
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -270,116 +99,103 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
-      - name: Download Terraform Outputs
-        uses: actions/download-artifact@v3
-        with:
-          name: deployment-summary
-          path: ./
-
-      - name: Run Ansible Playbook with Retries
-        uses: nick-fields/retry@v2
-        with:
-          timeout_minutes: 30
-          max_attempts: ${{ env.MAX_RETRY_ATTEMPTS }}
-          command: |
-            cd ansible
-            ansible-playbook -i inventory/${{ github.event.inputs.environment || 'staging' }} site.yml --diff
-
-      - name: Verify Ansible Configuration
+      - name: Set AWS EC2 dynamic inventory permissions
         run: |
-          cd ansible
-          echo "## Ansible Configuration Verification" > ansible_verification.md
-          echo "### Server Status" >> ansible_verification.md
+          mkdir -p ~/.aws
+          echo "[default]" > ~/.aws/config
+          echo "region = us-east-1" >> ~/.aws/config
           
-          # Get instance IPs from inventory
-          HOSTS=$(ansible-inventory -i inventory/${{ github.event.inputs.environment || 'staging' }} --list | jq -r '.all.hosts[]')
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible boto3 botocore
           
-          for host in $HOSTS; do
-            echo "- $host: $(ansible -i inventory/${{ github.event.inputs.environment || 'staging' }} $host -m ping)" >> ansible_verification.md
+      - name: Install Ansible Collections
+        run: ansible-galaxy collection install amazon.aws
+
+      - name: Setup SSH Configuration
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/zombieacs730
+          chmod 600 ~/.ssh/zombieacs730
+          echo "StrictHostKeyChecking no" >> ~/.ssh/config
+          echo "UserKnownHostsFile /dev/null" >> ~/.ssh/config
+
+      - name: Wait for instances to be ready
+        run: |
+          echo "Waiting for instances to be in running state..."
+          aws ec2 wait instance-running \
+            --region us-east-1 \
+            --filters "Name=tag:Name,Values=zombies_webserver2" \
+            --query "Reservations[*].Instances[*].InstanceId" \
+            --output text
+
+      - name: Wait for SSH to be available
+        run: |
+          for ip in $(aws ec2 describe-instances \
+            --region us-east-1 \
+            --filters "Name=tag:Name,Values=zombies_webserver2" \
+            --query "Reservations[*].Instances[*].PublicIpAddress" \
+            --output text); do
+            
+            echo "Waiting for SSH connection on $ip..."
+            until nc -zv -w 5 $ip 22; do
+              sleep 10
+              echo "Still waiting for SSH on $ip..."
+            done
+            echo "SSH available on $ip"
           done
-          
-          cat ansible_verification.md
 
-      - name: Upload Ansible Verification
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ansible-verification
-          path: |
-            ansible/inventory/*
-            ansible/validation_report.md
-          retention-days: 30
-          compression-level: 6
-          overwrite: true
-          if-no-files-found: warn
-
-  deployment_notification:
-    needs: [terraform, ansible]
-    if: |
-      always() &&
-      (needs.terraform.result != 'skipped' || needs.ansible.result != 'skipped')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Process Deployment Result
+      - name: Verify Dynamic Inventory
+        working-directory: ./Ansible
         run: |
-          if [ "${{ needs.terraform.result }}" = "success" ] && [ "${{ needs.ansible.result }}" = "success" ]; then
-            echo "status=success" >> $GITHUB_ENV
-            echo "message=✅ Deployment completed successfully" >> $GITHUB_ENV
-          else
-            echo "status=failure" >> $GITHUB_ENV
-            echo "message=❌ Deployment failed" >> $GITHUB_ENV
-          fi
+          ansible-inventory -i inventory/aws_ec2.yml --graph
+          ansible-inventory -i inventory/aws_ec2.yml --list
 
-      - name: Create GitHub Issue on Failure
-        if: env.status == 'failure'
+      - name: Run Ansible Playbook - Bastion
+        working-directory: ./Ansible
+        run: ansible-playbook -i inventory/aws_ec2.yml playbooks/bastion.yml
+
+      - name: Run Ansible Playbook - Webservers
+        working-directory: ./Ansible
+        run: ansible-playbook -i inventory/aws_ec2.yml playbooks/webserver.yml
+
+  notify:
+    needs: [terraform, ansible]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Notify Deployment Status
         uses: actions/github-script@v6
         with:
           script: |
-            const issue = await github.rest.issues.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: `Deployment Failed: ${{ github.event.inputs.environment }} - ${new Date().toISOString()}`,
-              body: `
-              # Deployment Failure Report
-              
-              ## Environment
-              - Environment: ${{ github.event.inputs.environment }}
-              - Workflow: ${process.env.GITHUB_WORKFLOW}
-              - Run ID: ${process.env.GITHUB_RUN_ID}
-              
-              ## Status
-              - Terraform: ${{ needs.terraform.result }}
-              - Ansible: ${{ needs.ansible.result }}
-              
-              ## Action Items
-              1. Review workflow logs
-              2. Check infrastructure state
-              3. Verify credentials and permissions
-              
-              ## Links
-              - [Workflow Run](${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})
-              - [Commit](${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/commit/${process.env.GITHUB_SHA})
-              `
-            });
-            
-            await github.rest.issues.addLabels({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: issue.data.number,
-              labels: ['deployment-failure', 'high-priority']
-            });
-
-      - name: Send Slack Notification
-        if: env.SLACK_WEBHOOK_URL != ''
-        uses: 8398a7/action-slack@v3
-        continue-on-error: true
+            const terraform_status = '${{ needs.terraform.result }}';
+            const ansible_status = '${{ needs.ansible.result }}';
+            const environment = '${{ inputs.environment || 'staging' }}';
+            let status = '✅ Deployment Successful!';
+            if (terraform_status !== 'success' || ansible_status !== 'success') {
+              status = '❌ Deployment Failed!';
+            }
+            const message = `### Deployment Status to ${environment}\n- Terraform: ${terraform_status}\n- Ansible: ${ansible_status}\n\n${status}`;
+            if (context.eventName === 'pull_request') {
+              await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: context.issue.number,
+                body: message
+              });
+            }
+  promote-to-prod:
+    name: Promote to Production
+    needs: [terraform, ansible]
+    if: ${{ github.ref == 'refs/heads/staging' && success() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Production Workflow
+        uses: benc-uk/workflow-dispatch@v1
         with:
-          status: ${{ job.status }}
-          fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
-          text: |
-            Deployment Status: ${{ env.message }}
-            Environment: ${{ github.event.inputs.environment || 'staging' }}
-            Workflow: ${{ github.workflow }}
-            Triggered by: ${{ github.actor }}
-        env:
-          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          workflow: "Infrastructure Deployment"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: prod
+          inputs: |
+            environment: prod
