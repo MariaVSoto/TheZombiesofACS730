@@ -44,3 +44,7 @@ output "alb_dns_name" {
 output "target_group_arn" {
   value = module.alb.target_group_arn
 } 
+output "webserver4_public_ip" {
+  description = "Public IP from webserver module"
+  value       = module.webserver.webserver4_public_ip
+}
