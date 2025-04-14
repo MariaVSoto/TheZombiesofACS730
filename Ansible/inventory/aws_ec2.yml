@@ -9,15 +9,14 @@ filters:
 
 keyed_groups:
   - key: tags.Name
-    prefix: tag_Name
+    prefix: tag_Name_
     separator: ""
   - key: tags.Environment
     prefix: env_
 
 hostnames:
-  - public-ip-address
   - private-ip-address
-  - tag:Name
+  - dns-name
 
 compose:
   ansible_host: public_ip_address
