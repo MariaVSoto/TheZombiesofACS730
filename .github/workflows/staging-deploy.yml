@@ -75,21 +75,16 @@ jobs:
         id: plan
         run: |
           echo "Running terraform plan..."
-          terraform plan -input=false -no-color -out=tf.plan
+          erraform plan -input=false -no-color -out=tf.plan || (echo "Terraform plan failed!"; exit 1)
           
-          # Comprobamos si terraform plan tuvo éxito
-          PLAN_EXIT_CODE=$?
-          if [ $PLAN_EXIT_CODE -eq 0 ]; then
-            echo "Plan generated successfully."
-          elif [ $PLAN_EXIT_CODE -eq 1 ]; then
-            echo "Error: Plan failed due to invalid configuration."
+          if [ ! -f tf.plan ]; then
+            echo "Plan file does not exist!"
             exit 1
-          elif [ $PLAN_EXIT_CODE -eq 2 ]; then
-            echo "No changes required."
           fi
           
           terraform show -no-color tf.plan > plan.txt
-          cat plan.txt  # Mostrar el contenido del plan para debug
+          echo "Plan file content:"
+          cat plan.txt
         working-directory: ${{ env.TF_DIR }} 
         continue-on-error: true
         
