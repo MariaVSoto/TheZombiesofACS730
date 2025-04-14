@@ -21,7 +21,7 @@ resource "aws_security_group" "web_sg" {
     from_port       = 22
     to_port         = 22
     protocol        = "tcp"
-    security_groups = [var.cidr_block] 
+    security_groups = [var.vpc_cidr_block] 
   }
 
   egress {
