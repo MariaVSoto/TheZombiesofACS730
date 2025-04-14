@@ -127,7 +127,7 @@ jobs:
           echo "Waiting for instances to be in running state..."
           aws ec2 wait instance-running \
             --region us-east-1 \
-            --filters "Name=tag:Name,Values=zombies_webserver2" \
+            --filters "Name=tag:Name,Values=zombies-webserver2" \
             --query "Reservations[*].Instances[*].InstanceId" \
             --output text
 
