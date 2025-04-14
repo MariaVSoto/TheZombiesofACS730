@@ -46,52 +46,30 @@ jobs:
           terraform_wrapper: true
 
       - name: Terraform Format
-        id: fmt
         run: terraform fmt -check -recursive
         continue-on-error: true
         working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Init
-        id: init
         run: terraform init
         working-directory: ${{ env.TF_DIR }}
 
       - name: Select Terraform Workspace
         run: |
-          echo "Current TF_WORKSPACE: $TF_WORKSPACE"
-          terraform workspace list
-          terraform workspace show
           unset TF_WORKSPACE
           terraform workspace select ${{ github.event.inputs.environment || 'staging' }} || \
           terraform workspace new ${{ github.event.inputs.environment || 'staging' }}
         working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Validate
-        id: validate
         run: terraform validate -no-color
         working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Plan
-        id: plan
-        run: |
-          echo "Running terraform plan..."
-          terraform plan \
-            -input=false \
-            -no-color \
-            -var-file="terraform.tfvars" \
-            -out=tf.plan || (echo "Terraform plan failed!"; exit 1)
-
-          if [ ! -f tf.plan ]; then
-            echo "Plan file does not exist!"
-            exit 1
-          fi
-          
-          terraform show -no-color tf.plan > plan.txt
-          echo "Plan file content:"
-          cat plan.txt
-        working-directory: ${{ env.TF_DIR }} 
+        run: terraform plan -input=false -no-color -out=tf.plan
+        working-directory: ${{ env.TF_DIR }}
         continue-on-error: true
-        
+
       - name: Debug Plan File Existence
         run: |
           if [ -f tf.plan ]; then
@@ -111,16 +89,14 @@ jobs:
             const plan = fs.readFileSync(`${process.env.TF_DIR}/plan.txt`, 'utf8');
             const maxLength = 65536;
             const chunks = [];
-            
             for (let i = 0; i < plan.length; i += maxLength) {
               chunks.push(plan.slice(i, i + maxLength));
             }
-            
             for (let i = 0; i < chunks.length; i++) {
               await github.rest.issues.createComment({
                 ...context.repo,
                 issue_number: context.issue.number,
-                body: `### Terraform Plan (Part ${i + 1}/${chunks.length})\n\`\`\`\n${chunks[i]}\n\`\`\``}
+                body: `### Terraform Plan (Part ${i + 1}/${chunks.length})\n\`\`\`\n${chunks[i]}\n\`\`\``
               });
             }
 
@@ -133,15 +109,12 @@ jobs:
 
       - name: Verify Deployment
         if: success()
-        run: |
-          echo "Verifying infrastructure deployment..."
-          terraform output -json > tf_output.json
+        run: terraform output -json > tf_output.json
         working-directory: ${{ env.TF_DIR }}
 
-      - name: Export Webserver IP from Terraform Outputs
+      - name: Export Webserver IP
         id: extract_outputs
-        run: |
-          echo "WEB_IP=$(jq -r .webserver4_public_ip.value tf_output.json)" >> $GITHUB_ENV
+        run: echo "WEB_IP=$(jq -r .webserver4_public_ip.value tf_output.json)" >> $GITHUB_ENV
         working-directory: ${{ env.TF_DIR }}
 
   ansible:
@@ -177,27 +150,19 @@ jobs:
         run: ansible-galaxy collection install amazon.aws
 
       - name: Wait for EC2 Instances
-        run: |
-          echo "Waiting for EC2 instances to be ready..."
-          sleep 90
+        run: sleep 90
 
       - name: Run Ansible Playbook - Bastion
         working-directory: ./Ansible
-        run: |
-          ansible-playbook -i inventory/aws_ec2.yml playbooks/bastion.yml
-        continue-on-error: false
+        run: ansible-playbook -i inventory/aws_ec2.yml playbooks/bastion.yml
 
       - name: Run Ansible Playbook - Webservers
         working-directory: ./Ansible
-        run: |
-          ansible-playbook -i inventory/aws_ec2.yml playbooks/webserver.yml
-        continue-on-error: false
+        run: ansible-playbook -i inventory/aws_ec2.yml playbooks/webserver.yml
 
       - name: Verify Web Services
         if: success()
-        run: |
-          echo "Verifying web services..."
-          curl -f http://$WEB_IP/health || exit 1
+        run: curl -f http://$WEB_IP/health || exit 1
 
   notify:
     needs: [terraform, ansible]
@@ -211,18 +176,15 @@ jobs:
             const terraform_status = '${{ needs.terraform.result }}';
             const ansible_status = '${{ needs.ansible.result }}';
             const environment = '${{ github.event.inputs.environment || 'staging' }}';
-            
             let status = '✅ Deployment Successful!';
             if (terraform_status !== 'success' || ansible_status !== 'success') {
               status = '❌ Deployment Failed!';
             }
-            
             const message = `### Deployment Status to ${environment}
             - Terraform: ${terraform_status}
             - Ansible: ${ansible_status}
             
             ${status}`;
-            
             if (context.eventName === 'pull_request') {
               await github.rest.issues.createComment({
                 ...context.repo,
@@ -245,3 +207,4 @@ jobs:
           ref: prod
           inputs: |
             environment: prod
+
