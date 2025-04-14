@@ -96,7 +96,9 @@ jobs:
 
   terraform:
     needs: [pre_deployment_check]
-    if: ${{ !failure() && (inputs.deploy_type == 'terraform' || inputs.deploy_type == 'full' || github.event_name == 'push') }}
+    if: |
+      needs.pre_deployment_check.result == 'success' &&
+      (github.event.inputs.deploy_type == 'terraform' || github.event.inputs.deploy_type == 'full' || github.event_name == 'push')
     name: "Terraform Deployment"
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment || 'staging' }}
@@ -238,8 +240,10 @@ jobs:
           if-no-files-found: warn
 
   ansible:
-    needs: terraform
-    if: ${{ !failure() && (inputs.deploy_type == 'ansible' || inputs.deploy_type == 'full' || github.event_name == 'push') }}
+    needs: [terraform]
+    if: |
+      needs.terraform.result == 'success' &&
+      (github.event.inputs.deploy_type == 'ansible' || github.event.inputs.deploy_type == 'full' || github.event_name == 'push')
     name: "Ansible Configuration"
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment || 'staging' }}
@@ -297,13 +301,13 @@ jobs:
           cat ansible_verification.md
 
       - name: Upload Ansible Verification
-        if: always()
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: ansible-verification
           path: |
-            Ansible/ansible_verification.md
-            Ansible/inventory/${{ github.event.inputs.environment || 'staging' }}/*
+            ansible/inventory/*
+            ansible/validation_report.md
           retention-days: 30
           compression-level: 6
           overwrite: true
@@ -311,7 +315,9 @@ jobs:
 
   deployment_notification:
     needs: [terraform, ansible]
-    if: always()
+    if: |
+      always() &&
+      (needs.terraform.result != 'skipped' || needs.ansible.result != 'skipped')
     runs-on: ubuntu-latest
     steps:
       - name: Process Deployment Result
