@@ -117,8 +117,8 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/zombies-key
-          chmod 600 ~/.ssh/zombies-key
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/zombieacs730
+          chmod 600 ~/.ssh/zombieacs730
           echo "StrictHostKeyChecking no" >> ~/.ssh/config
           echo "UserKnownHostsFile /dev/null" >> ~/.ssh/config
 
