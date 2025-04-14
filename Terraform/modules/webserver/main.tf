@@ -75,6 +75,10 @@ resource "aws_launch_template" "asg_lt" {
   
   vpc_security_group_ids = [aws_security_group.web_sg.id]
   
+  iam_instance_profile {
+    name = "LabRole"
+  }
+
   tag_specifications {
     resource_type = "instance"
     tags = merge(var.common_tags, var.additional_tags, {
@@ -174,6 +178,10 @@ resource "aws_launch_template" "bastion_lt" {
   
   vpc_security_group_ids = [aws_security_group.web_sg.id]
 
+  iam_instance_profile {
+    name = "LabRole"
+  }
+
   tag_specifications {
     resource_type = "instance"
     tags          = merge(var.common_tags, var.additional_tags, {
@@ -261,6 +269,10 @@ resource "aws_launch_template" "webserver4_lt" {
   key_name      = var.key_name
   
   vpc_security_group_ids = [aws_security_group.web_sg.id]
+
+  iam_instance_profile {
+    name = "LabRole"
+  }
 
   tag_specifications {
     resource_type = "instance"
@@ -357,6 +369,10 @@ resource "aws_launch_template" "private_lt" {
   key_name      = var.key_name
 
   vpc_security_group_ids = [aws_security_group.private_sg.id]
+
+  iam_instance_profile {
+    name = "LabRole"
+  }
 
   tag_specifications {
     resource_type = "instance"
