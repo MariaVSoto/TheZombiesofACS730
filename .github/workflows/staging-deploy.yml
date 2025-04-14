@@ -33,6 +33,7 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
       TF_WORKSPACE: ${{ github.event.inputs.environment || 'staging' }}
+      DEPLOY_ENV: ${{ github.event.inputs.environment || 'staging' }}
 
     steps:
       - name: Checkout
@@ -53,24 +54,24 @@ jobs:
       - name: Terraform Init
         id: init
         run: terraform init
-        working-directory: ./Terraform
+        working-directory: ./Terraform/${{ env.DEPLOY_ENV }}
 
       - name: Select Terraform Workspace
         run: |
           terraform workspace select $TF_WORKSPACE || terraform workspace new $TF_WORKSPACE
-        working-directory: ./Terraform
+        working-directory: ./Terraform/${{ env.DEPLOY_ENV }}
 
       - name: Terraform Validate
         id: validate
         run: terraform validate -no-color
-        working-directory: ./Terraform
+        working-directory: ./Terraform/${{ env.DEPLOY_ENV }}
 
       - name: Terraform Plan
         id: plan
         run: |
           terraform plan -input=false -no-color -out tf.plan
           terraform show -no-color tf.plan > plan.txt
-        working-directory: ./Terraform 
+        working-directory: ./Terraform/${{ env.DEPLOY_ENV }}
         continue-on-error: true
 
       - name: Post Plan to PR
@@ -79,7 +80,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const plan = fs.readFileSync('Terraform/plan.txt', 'utf8');
+            const plan = fs.readFileSync('Terraform/${{ env.DEPLOY_ENV }}/plan.txt', 'utf8');
             const maxLength = 65536;
             const chunks = [];
             
@@ -100,14 +101,14 @@ jobs:
           (github.ref == 'refs/heads/staging' && github.event_name == 'push') ||
           (github.event_name == 'workflow_dispatch')
         run: terraform apply -input=false -auto-approve tf.plan
-        working-directory: ./Terraform
+        working-directory: ./Terraform/${{ env.DEPLOY_ENV }}
 
       - name: Verify Deployment
         if: success()
         run: |
           echo "Verifying infrastructure deployment..."
           terraform output -json > tf_output.json
-        working-directory: ./Terraform
+        working-directory: ./Terraform/${{ env.DEPLOY_ENV }}
 
   ansible:
     needs: terraform
