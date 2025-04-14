@@ -42,3 +42,4 @@ output "vm6_private_ip" {
   description = "Private IP of VM6"
   value       = aws_instance.vm6.private_ip
 } 
+

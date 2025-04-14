@@ -53,7 +53,8 @@ module "webserver" {
   additional_tags       = var.additional_tags
   bastion_sg_id         = module.network.bastion_security_group_id
   s3_bucket             = var.s3_bucket
-  region = var.region
+  region                = var.region
+  vpc_cidr              = var.vpc_cidr
   
   bastion_subnet_index = var.bastion_subnet_index
   web4_subnet_index    = var.web4_subnet_index
