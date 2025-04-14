@@ -26,14 +26,15 @@ jobs:
   terraform:
     name: "Terraform Deployment"
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
+    environment: ${{ inputs.environment || (github.ref == 'refs/heads/prod' && 'prod') || 'staging' }}
     env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-      TF_DIR: Terraform/${{ github.event.inputs.environment || 'staging' }}
       TF_VAR_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+    defaults:
+      run:
+        working-directory: Terraform/${{ inputs.environment || (github.ref == 'refs/heads/prod' && 'prod') || 'staging' }}
 
     steps:
       - name: Checkout
@@ -43,83 +44,62 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.1.9
-          terraform_wrapper: true
 
       - name: Terraform Format
-        id: fmt
-        run: terraform fmt -check -recursive
-        continue-on-error: true
-        working-directory: ${{ env.TF_DIR }}
+        run: terraform fmt -check -recursive || true
 
       - name: Terraform Init
-        id: init
         run: terraform init
-        working-directory: ${{ env.TF_DIR }}
 
       - name: Select Terraform Workspace
         run: |
-          echo "Current TF_WORKSPACE: $TF_WORKSPACE"
-          terraform workspace list
-          terraform workspace show
-          unset TF_WORKSPACE
-          terraform workspace select ${{ github.event.inputs.environment || 'staging' }} || \
-          terraform workspace new ${{ github.event.inputs.environment || 'staging' }}
-        working-directory: ${{ env.TF_DIR }}
+          terraform workspace select ${{ inputs.environment || 'staging' }} || \
+          terraform workspace new ${{ inputs.environment || 'staging' }}
 
       - name: Terraform Validate
-        id: validate
         run: terraform validate -no-color
-        working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Plan
-        id: plan
-        run: |
-          terraform plan -input=false -no-color -out tf.plan
-          terraform show -no-color tf.plan > plan.txt
-        working-directory: ${{ env.TF_DIR }} 
-        continue-on-error: true
+        run: terraform plan -input=false -no-color -out=tf.plan
 
-      - name: Post Plan to PR
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const fs = require('fs');
-            const plan = fs.readFileSync(`${process.env.TF_DIR}/plan.txt`, 'utf8');
-            const maxLength = 65536;
-            const chunks = [];
-            
-            for (let i = 0; i < plan.length; i += maxLength) {
-              chunks.push(plan.slice(i, i + maxLength));
-            }
-            
-            for (let i = 0; i < chunks.length; i++) {
-              await github.rest.issues.createComment({
-                ...context.repo,
-                issue_number: context.issue.number,
-                body: `### Terraform Plan (Part ${i + 1}/${chunks.length})\n\`\`\`\n${chunks[i]}\n\`\`\``
-              });
-            }
+      - name: Debug Plan File Existence
+        run: |
+          if [ -f tf.plan ]; then
+            echo "Plan file exists!"
+          else
+            echo "Plan file does not exist!"
+            exit 1
+          fi
 
       - name: Terraform Apply
         if: |
-          (github.ref == 'refs/heads/staging' && github.event.inputs.environment == 'staging') ||
-          (github.ref == 'refs/heads/prod' && github.event.inputs.environment == 'prod')
+          (github.ref == 'refs/heads/staging' && inputs.environment == 'staging') ||
+          (github.ref == 'refs/heads/prod' && inputs.environment == 'prod')
         run: terraform apply -input=false -auto-approve tf.plan
-        working-directory: ${{ env.TF_DIR }}
 
       - name: Verify Deployment
         if: success()
+        run: terraform output -json > tf_output.json
+
+      - name: Show tf_output.json content
+        run: cat tf_output.json
+
+      - name: Export Webserver IP
+        id: extract_outputs
         run: |
-          echo "Verifying infrastructure deployment..."
-          terraform output -json > tf_output.json
-        working-directory: ${{ env.TF_DIR }}
+          WEB_IP=$(jq -r .webserver4_public_ip.value tf_output.json)
+          echo "WEB_IP=$WEB_IP" >> $GITHUB_ENV
+          echo "Webserver IP: $WEB_IP"
+          if [ -z "$WEB_IP" ]; then
+            echo "❌ WEB_IP is empty. Check Terraform outputs."
+            exit 1
+          fi
 
   ansible:
     needs: terraform
     name: "Ansible Configuration"
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
+    environment: ${{ inputs.environment || 'staging' }}
     if: success()
 
     steps:
@@ -148,27 +128,19 @@ jobs:
         run: ansible-galaxy collection install amazon.aws
 
       - name: Wait for EC2 Instances
-        run: |
-          echo "Waiting for EC2 instances to be ready..."
-          sleep 90
+        run: sleep 90
 
       - name: Run Ansible Playbook - Bastion
         working-directory: ./Ansible
-        run: |
-          ansible-playbook -i inventory/aws_ec2.yml playbooks/bastion.yml
-        continue-on-error: false
+        run: ansible-playbook -i inventory/aws_ec2.yml playbooks/bastion.yml
 
       - name: Run Ansible Playbook - Webservers
         working-directory: ./Ansible
-        run: |
-          ansible-playbook -i inventory/aws_ec2.yml playbooks/webserver.yml
-        continue-on-error: false
+        run: ansible-playbook -i inventory/aws_ec2.yml playbooks/webserver.yml
 
       - name: Verify Web Services
         if: success()
-        run: |
-          echo "Verifying web services..."
-          curl -f http://<web-server-ip>/health || exit 1
+        run: curl -f http://$WEB_IP/health || exit 1
 
   notify:
     needs: [terraform, ansible]
@@ -181,19 +153,12 @@ jobs:
           script: |
             const terraform_status = '${{ needs.terraform.result }}';
             const ansible_status = '${{ needs.ansible.result }}';
-            const environment = '${{ github.event.inputs.environment || 'staging' }}';
-            
+            const environment = '${{ inputs.environment || 'staging' }}';
             let status = '✅ Deployment Successful!';
             if (terraform_status !== 'success' || ansible_status !== 'success') {
               status = '❌ Deployment Failed!';
             }
-            
-            const message = `### Deployment Status to ${environment}
-            - Terraform: ${terraform_status}
-            - Ansible: ${ansible_status}
-            
-            ${status}`;
-            
+            const message = `### Deployment Status to ${environment}\n- Terraform: ${terraform_status}\n- Ansible: ${ansible_status}\n\n${status}`;
             if (context.eventName === 'pull_request') {
               await github.rest.issues.createComment({
                 ...context.repo,
