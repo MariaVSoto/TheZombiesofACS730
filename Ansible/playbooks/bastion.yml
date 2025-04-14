@@ -1,6 +1,6 @@
 ---
 - name: Configure Bastion Host (Webserver 2)
-  hosts: tag_Name_zombies-webserver2
+  hosts: tag_Name_zombies_webserver2
   become: yes
   vars:
     ansible_user: ec2-user 
