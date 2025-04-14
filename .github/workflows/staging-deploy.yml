@@ -143,11 +143,11 @@ ansible:
             playbooks/webserver.yml \
             -vvv
 
-  notify:
-    needs: [terraform, ansible]
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
+    notify:
+      needs: [terraform, ansible]
+      runs-on: ubuntu-latest
+      if: always()
+      steps:
       - name: Notify Deployment Status
         uses: actions/github-script@v6
         with:
@@ -168,12 +168,12 @@ ansible:
               });
             }
 
-  promote-to-prod:
-    name: Promote to Production
-    needs: [terraform, ansible]
-    if: ${{ github.ref == 'refs/heads/staging' && success() }}
-    runs-on: ubuntu-latest
-    steps:
+    promote-to-prod:
+      name: Promote to Production
+      needs: [terraform, ansible]
+      if: ${{ github.ref == 'refs/heads/staging' && success() }}
+      runs-on: ubuntu-latest
+      steps:
       - name: Trigger Production Workflow
         uses: benc-uk/workflow-dispatch@v1
         with:
