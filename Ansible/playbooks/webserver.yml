@@ -1,6 +1,6 @@
 ---
 - name: Configure Web Servers
-  hosts: tag_Name_zombies_webserver3,tag_Name_zombies_webserver4,tag_Name_zombies_webserver5
+  hosts: tag_Name_zombies-webserver3,tag_Name_zombies-webserver4,tag_Name_zombies-webserver5
   become: yes
   vars:
     s3_bucket: "zombies-acs730"
