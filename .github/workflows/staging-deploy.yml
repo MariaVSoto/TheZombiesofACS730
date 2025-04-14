@@ -26,13 +26,15 @@ jobs:
   terraform:
     name: "Terraform Deployment"
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
+    environment: ${{ inputs.environment || (github.ref == 'refs/heads/prod' && 'prod') || 'staging' }}
     env:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
       TF_VAR_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
+    defaults:
+      run:
+        working-directory: Terraform/${{ inputs.environment || (github.ref == 'refs/heads/prod' && 'prod') || 'staging' }}
 
     steps:
       - name: Checkout
@@ -42,37 +44,23 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.1.9
-          terraform_wrapper: true
-
-      - name: Set Deployment Environment Variables
-        run: |
-          ENVIRONMENT="${{ github.event.inputs.environment || (github.ref == 'refs/heads/prod' && 'prod') || 'staging' }}"
-          echo "DEPLOY_ENV=$ENVIRONMENT" >> $GITHUB_ENV
-          echo "TF_DIR=Terraform/$ENVIRONMENT" >> $GITHUB_ENV
 
       - name: Terraform Format
-        run: terraform fmt -check -recursive
-        continue-on-error: true
-        working-directory: ${{ env.TF_DIR }}
+        run: terraform fmt -check -recursive || true
 
       - name: Terraform Init
         run: terraform init
-        working-directory: ${{ env.TF_DIR }}
 
       - name: Select Terraform Workspace
         run: |
-          unset TF_WORKSPACE
-          terraform workspace select $DEPLOY_ENV || terraform workspace new $DEPLOY_ENV
-        working-directory: ${{ env.TF_DIR }}
+          terraform workspace select ${{ inputs.environment || 'staging' }} || \
+          terraform workspace new ${{ inputs.environment || 'staging' }}
 
       - name: Terraform Validate
         run: terraform validate -no-color
-        working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Plan
         run: terraform plan -input=false -no-color -out=tf.plan
-        working-directory: ${{ env.TF_DIR }}
-        continue-on-error: true
 
       - name: Debug Plan File Existence
         run: |
@@ -82,19 +70,19 @@ jobs:
             echo "Plan file does not exist!"
             exit 1
           fi
-        working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Apply
         if: |
-          (github.ref == 'refs/heads/staging') ||
-          (github.ref == 'refs/heads/prod' && github.event.inputs.environment == 'prod')
+          (github.ref == 'refs/heads/staging' && inputs.environment == 'staging') ||
+          (github.ref == 'refs/heads/prod' && inputs.environment == 'prod')
         run: terraform apply -input=false -auto-approve tf.plan
-        working-directory: ${{ env.TF_DIR }}
 
       - name: Verify Deployment
         if: success()
         run: terraform output -json > tf_output.json
-        working-directory: ${{ env.TF_DIR }}
+
+      - name: Show tf_output.json content
+        run: cat tf_output.json
 
       - name: Export Webserver IP
         id: extract_outputs
@@ -106,13 +94,12 @@ jobs:
             echo "❌ WEB_IP is empty. Check Terraform outputs."
             exit 1
           fi
-        working-directory: ${{ env.TF_DIR }}
 
   ansible:
     needs: terraform
     name: "Ansible Configuration"
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
+    environment: ${{ inputs.environment || 'staging' }}
     if: success()
 
     steps:
@@ -151,14 +138,6 @@ jobs:
         working-directory: ./Ansible
         run: ansible-playbook -i inventory/aws_ec2.yml playbooks/webserver.yml
 
-      - name: Check Webserver IP
-        run: |
-          echo "WEB_IP is: $WEB_IP"
-          if [ -z "$WEB_IP" ]; then
-            echo "❌ WEB_IP is not set!"
-            exit 1
-          fi
-
       - name: Verify Web Services
         if: success()
         run: curl -f http://$WEB_IP/health || exit 1
@@ -174,16 +153,12 @@ jobs:
           script: |
             const terraform_status = '${{ needs.terraform.result }}';
             const ansible_status = '${{ needs.ansible.result }}';
-            const environment = '${{ github.event.inputs.environment || 'staging' }}';
+            const environment = '${{ inputs.environment || 'staging' }}';
             let status = '✅ Deployment Successful!';
             if (terraform_status !== 'success' || ansible_status !== 'success') {
               status = '❌ Deployment Failed!';
             }
-            const message = `### Deployment Status to ${environment}
-            - Terraform: ${terraform_status}
-            - Ansible: ${ansible_status}
-            
-            ${status}`;
+            const message = `### Deployment Status to ${environment}\n- Terraform: ${terraform_status}\n- Ansible: ${ansible_status}\n\n${status}`;
             if (context.eventName === 'pull_request') {
               await github.rest.issues.createComment({
                 ...context.repo,
