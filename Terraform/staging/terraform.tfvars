@@ -1,22 +1,22 @@
 # Environment Settings
-environment = "prod"
+environment = "dev"
 team_name   = "zombies"
 group_name  = "zombies"
 region      = "us-east-1"
 
 # Network Settings
-vpc_cidr = "10.2.0.0/16"  # Different CIDR for prod
+vpc_cidr = "10.1.0.0/16"
 
 public_subnets = [
-  "10.2.1.0/24", # Webserver 1 (ASG)
-  "10.2.2.0/24", # Webserver 2 (Bastion)
-  "10.2.3.0/24", # Webserver 3 (ASG)
-  "10.2.4.0/24"  # Webserver 4
+  "10.1.1.0/24", # Webserver 1 (ASG)
+  "10.1.2.0/24", # Webserver 2 (Bastion)
+  "10.1.3.0/24", # Webserver 3 (ASG)
+  "10.1.4.0/24"  # Webserver 4
 ]
 
 private_subnets = [
-  "10.2.5.0/24", # Webserver 5
-  "10.2.6.0/24"  # VM 6
+  "10.1.5.0/24", # Webserver 5
+  "10.1.6.0/24"  # VM 6
 ]
 
 availability_zones = [
@@ -35,12 +35,12 @@ key_name      = "zombieacs730"
 ami_id        = "ami-00a929b66ed6e0de6" # Amazon Linux 2023 AMI for us-east-1
 
 # S3 Settings
-s3_bucket = "zombies-acs730"
+s3_bucket = "thezombiesofacs730"
 
 # Auto Scaling Group Settings (for Webserver 1 and 3)
 asg_min_size         = 2 # Minimum one instance each for Webserver 1 and 3
-asg_max_size         = 6 # Maximum three instances each for Webserver 1 and 3
-asg_desired_capacity = 4 # Desired two instances each for Webserver 1 and 3
+asg_max_size         = 4 # Maximum two instances each for Webserver 1 and 3
+asg_desired_capacity = 2 # Desired one instance each for Webserver 1 and 3
 
 # Static Instance Settings
 bastion_subnet_index = 1 # Webserver 2 in public subnet 2
@@ -58,7 +58,7 @@ managed_by   = "Terraform"
 common_tags = {
   Team        = "zombies"
   Project     = "ACS730"
-  Environment = "prod"
+  Environment = "dev"
   Terraform   = "true"
   CostCenter  = "ACS730-Project"
   Owner       = "Zombies Team"
@@ -67,12 +67,7 @@ common_tags = {
 
 additional_tags = {
   Department = "Cloud Computing"
-<<<<<<<< HEAD:Terraform/prod/terraform.tfvars.example
-  Purpose    = "Production"
-} 
-========
   Purpose    = "Education"
 } 
 
-###
->>>>>>>> c33dc75b5554a8844d521172cdbfc1b7380b0576:Terraform/prod/terraform.tfvars
+####

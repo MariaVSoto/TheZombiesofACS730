@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Zombies Team - {{ hostname }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        p {
+            color: #34495e;
+            line-height: 1.6;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 20px auto;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hello from Webserver {{ webserver_id }}</h1>
+        <p>Team: {{ team_name }}</p>
+        <p>Hostname: {{ hostname }}</p>
+        <p>IP Address: {{ ip_address }}</p>
+        <p>Created by Terraform and configured by Ansible</p>
+        <img src="/webserver{{ webserver_id }}.jpg" alt="Webserver {{ webserver_id }} Image">
+    </div>
+</body>
+</html> 
