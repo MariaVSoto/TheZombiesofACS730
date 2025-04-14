@@ -35,7 +35,7 @@ jobs:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
-      TF_DIR: Terraform/${{ env.DEPLOY_ENV }}
+      TF_DIR: Terraform/${{ github.event.inputs.environment || 'staging' }}
       TF_VAR_public_key: ${{ secrets.SSH_PUBLIC_KEY }}
 
     steps:
