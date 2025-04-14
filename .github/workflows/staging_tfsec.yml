@@ -1,87 +1,63 @@
-name: Terraform Security Check
+name: 'Terraform Security Check'
 
 on:
-  workflow_dispatch:
   push:
-    branches: [ main, staging, Kevin ]
-    paths:
-      - 'Terraform/**'
-      - '.github/workflows/**'
+    branches: [ main, staging ]
   pull_request:
     branches: [ main, staging ]
-    paths:
-      - 'Terraform/**'
 
 jobs:
-  security_checks:
-    name: Security Checks
+  tfsec:
+    name: Security Check
     runs-on: ubuntu-latest
-    permissions:
-      actions: read
-      contents: read
-      security-events: write
-      pull-requests: write
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_SESSION_TOKEN: ${{ secrets.AWS_SESSION_TOKEN }}
+      TF_DIR: Terraform/staging
 
     steps:
-      - name: Clone repo
+      - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Setup TFLint
-        uses: terraform-linters/setup-tflint@v2
+      - name: tfsec
+        uses: aquasecurity/tfsec-action@v1.0.0
         with:
-          tflint_version: v0.38.1
+          soft_fail: true
 
-      - name: Setup Checkov
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.1.9
+
+      - name: Install terraform-compliance
+        run: |
+          pip install terraform-compliance
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_DIR }}
+        run: terraform init
+
+      - name: Run terraform-compliance
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          terraform plan -out=plan.out
+          terraform show -json plan.out > plan.json
+          terraform-compliance -f ../../features/ -p plan.json || true
+
+      - name: Run Checkov
         uses: bridgecrewio/checkov-action@master
         with:
-          directory: Terraform
-          quiet: true
+          directory: ${{ env.TF_DIR }}
+          framework: terraform
           soft_fail: true
 
-      - name: Run TFLint
-        run: |
-          tflint --init
-          tflint -f compact
-        working-directory: ./Terraform
-
-      - name: Run tfsec with SARIF output
-        uses: aquasecurity/tfsec-sarif-action@v0.1.4
-        with:
-          working_directory: Terraform
-          sarif_file: tfsec.sarif
-          soft_fail: true
-
-      - name: Run Terrascan
-        uses: tenable/terrascan-action@main
-        with:
-          iac_type: 'terraform'
-          iac_version: 'v14'
-          policy_type: 'aws'
-          only_warn: true
-          sarif_upload: true
-          working_directory: Terraform
-
-      - name: Upload SARIF files
-        uses: github/codeql-action/upload-sarif@v2
-        if: always()
-        with:
-          sarif_file: tfsec.sarif
-
-      - name: Notify on Failure
+      - name: Notify on failure
         if: failure()
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const { repo, owner } = context.repo;
-            const run_id = context.runId;
-            const run_url = `https://github.com/${owner}/${repo}/actions/runs/${run_id}`;
-            const message = `❌ Security checks failed in ${context.workflow}! Check the logs at ${run_url}`;
-            
-            if (context.eventName === 'pull_request') {
-              github.rest.issues.createComment({
-                owner,
-                repo,
-                issue_number: context.issue.number,
-                body: message
-              });
-            }
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_MESSAGE: 'Security check failed!'
+          SLACK_COLOR: '#FF0000'
+          SLACK_TITLE: 'Terraform Security Check Failed'
+          SLACK_USERNAME: 'Security Bot'

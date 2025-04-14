@@ -38,22 +38,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.1.9
-          terraform_wrapper: true
-
       - name: Set Deployment Environment Variables
         run: |
           ENVIRONMENT="${{ github.event.inputs.environment || (github.ref == 'refs/heads/prod' && 'prod') || 'staging' }}"
           echo "DEPLOY_ENV=$ENVIRONMENT" >> $GITHUB_ENV
           echo "TF_DIR=Terraform/$ENVIRONMENT" >> $GITHUB_ENV
 
-      - name: Terraform Format
-        run: terraform fmt -check -recursive
-        continue-on-error: true
-        working-directory: ${{ env.TF_DIR }}
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.1.9
+          terraform_wrapper: true
 
       - name: Terraform Init
         run: terraform init
@@ -65,21 +60,37 @@ jobs:
           terraform workspace select $DEPLOY_ENV || terraform workspace new $DEPLOY_ENV
         working-directory: ${{ env.TF_DIR }}
 
+      - name: Check Terraform State
+        run: |
+          terraform show -json | jq -e . >/dev/null 2>&1 || {
+            echo "Error: Invalid or corrupted Terraform state"
+            exit 1
+          }
+        working-directory: ${{ env.TF_DIR }}
+
+      - name: Terraform Format
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+        working-directory: ${{ env.TF_DIR }}
+
       - name: Terraform Validate
         run: terraform validate -no-color
         working-directory: ${{ env.TF_DIR }}
 
       - name: Terraform Plan
-        run: terraform plan -input=false -no-color -out=tf.plan
+        id: plan
+        run: |
+          terraform plan -input=false -no-color -out=tf.plan || exit 1
+          echo "plan_exit_code=$?" >> $GITHUB_OUTPUT
         working-directory: ${{ env.TF_DIR }}
-        continue-on-error: true
 
       - name: Debug Plan File Existence
         run: |
           if [ -f tf.plan ]; then
-            echo "Plan file exists!"
+            echo "✅ Plan file exists"
+            ls -la tf.plan
           else
-            echo "Plan file does not exist!"
+            echo "❌ Plan file does not exist"
             exit 1
           fi
         working-directory: ${{ env.TF_DIR }}
@@ -93,19 +104,26 @@ jobs:
 
       - name: Verify Deployment
         if: success()
-        run: terraform output -json > tf_output.json
+        run: |
+          terraform output -json > tf_output.json
+          if [ ! -s tf_output.json ]; then
+            echo "❌ Terraform output is empty"
+            exit 1
+          fi
+          echo "✅ Terraform output verified"
         working-directory: ${{ env.TF_DIR }}
 
       - name: Export Webserver IP
         id: extract_outputs
         run: |
-          WEB_IP=$(jq -r .webserver4_public_ip.value tf_output.json)
+          WEB_IP=$(jq -r '.webserver4_public_ip.value // empty' tf_output.json)
           echo "WEB_IP=$WEB_IP" >> $GITHUB_ENV
           echo "Webserver IP: $WEB_IP"
           if [ -z "$WEB_IP" ]; then
             echo "❌ WEB_IP is empty. Check Terraform outputs."
             exit 1
           fi
+          echo "✅ Successfully extracted Webserver IP"
         working-directory: ${{ env.TF_DIR }}
 
   ansible:
