@@ -285,6 +285,7 @@ resource "aws_launch_template" "bastion_lt" {
     HTML
     EOF
 )
+}
 
 # ========================
 # Launch Template for Webserver 4
@@ -377,6 +378,7 @@ resource "aws_launch_template" "webserver4_lt" {
     echo "Private IP: $PRIVATE_IP" >> /var/log/user-data.log
     EOF
 )
+}
 
 # ========================
 # Launch Template for Webserver 5 and 6 (Private Instances)
