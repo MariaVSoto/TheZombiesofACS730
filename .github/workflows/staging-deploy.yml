@@ -215,10 +215,27 @@ jobs:
 
       - name: Upload Deployment Summary
         if: success()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: deployment-summary
           path: ${{ env.TF_DIR }}/deployment_summary.md
+          retention-days: 30
+          compression-level: 6
+          overwrite: true
+          if-no-files-found: warn
+
+      - name: Upload Terraform Plan
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-plan
+          path: |
+            ${{ env.TF_DIR }}/tf.plan
+            ${{ env.TF_DIR }}/plan_output.txt
+          retention-days: 30
+          compression-level: 6
+          overwrite: true
+          if-no-files-found: warn
 
   ansible:
     needs: terraform
@@ -280,10 +297,17 @@ jobs:
           cat ansible_verification.md
 
       - name: Upload Ansible Verification
-        uses: actions/upload-artifact@v3
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: ansible-verification
-          path: Ansible/ansible_verification.md
+          path: |
+            Ansible/ansible_verification.md
+            Ansible/inventory/${{ github.event.inputs.environment || 'staging' }}/*
+          retention-days: 30
+          compression-level: 6
+          overwrite: true
+          if-no-files-found: warn
 
   deployment_notification:
     needs: [terraform, ansible]
