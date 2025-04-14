@@ -282,12 +282,12 @@ jobs:
           timeout_minutes: 30
           max_attempts: ${{ env.MAX_RETRY_ATTEMPTS }}
           command: |
-            cd Ansible
+            cd ansible
             ansible-playbook -i inventory/${{ github.event.inputs.environment || 'staging' }} site.yml --diff
 
       - name: Verify Ansible Configuration
         run: |
-          cd Ansible
+          cd ansible
           echo "## Ansible Configuration Verification" > ansible_verification.md
           echo "### Server Status" >> ansible_verification.md
           
@@ -372,6 +372,7 @@ jobs:
       - name: Send Slack Notification
         if: env.SLACK_WEBHOOK_URL != ''
         uses: 8398a7/action-slack@v3
+        continue-on-error: true
         with:
           status: ${{ job.status }}
           fields: repo,message,commit,author,action,eventName,ref,workflow,job,took
@@ -380,3 +381,5 @@ jobs:
             Environment: ${{ github.event.inputs.environment || 'staging' }}
             Workflow: ${{ github.workflow }}
             Triggered by: ${{ github.actor }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
