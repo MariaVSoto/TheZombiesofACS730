@@ -1,6 +1,6 @@
 ---
 - name: Configure Bastion Host (Webserver 2)
-  hosts: tag_Name_prod_webserver2
+  hosts: tag_Name_zombies_webserver2
   become: yes
   vars:
     s3_bucket: "zombies-acs730"
