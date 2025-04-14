@@ -118,7 +118,7 @@ variable "admin_ip_cidr" {
   default     = "0.0.0.0/0" # Consider restricting this to your IP
 }
 
-variable "vpc_cidr" {
+variable "cidr_block" {
   description = "CIDR block for the VPC"
   type        = string
 }
