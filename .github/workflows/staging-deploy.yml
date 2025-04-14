@@ -102,12 +102,15 @@ jobs:
             AWS_SECRET_ACCESS_KEY
             SSH_PUBLIC_KEY
         run: |
-          for secret in ${REQUIRED_SECRETS}; do
-            if [ -z "${{ secrets[secret] }}" ]; then
+          echo "Verifying required secrets..."
+          IFS=',' read -ra SECRETS <<< "$REQUIRED_SECRETS"
+          for secret in "${SECRETS[@]}"; do
+            secret_value="${{ secrets[secret] }}"
+            if [ -z "${secret_value}" ]; then
               echo "::error::Missing required secret: $secret"
               exit 1
             else
-              echo "Secret $secret is available (first 3 chars: ${${{ secrets[secret] }:0:3}...)"
+              echo "Secret $secret is available (first 3 chars: ${secret_value:0:3}...)"
             fi
           done
 
