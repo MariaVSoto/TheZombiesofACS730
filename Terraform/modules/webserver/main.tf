@@ -248,8 +248,6 @@ resource "aws_launch_template" "bastion_lt" {
               EOF
   )
 
-  # iam_instance_profile {
-  #   name = "LabProfile"
 }
 
 
@@ -345,8 +343,6 @@ resource "aws_launch_template" "webserver4_lt" {
               EOF
   )
 
-  # iam_instance_profile {
-  #   name = "LabProfile"
   }
 
 # Launch Template for Webserver 5 and 6
