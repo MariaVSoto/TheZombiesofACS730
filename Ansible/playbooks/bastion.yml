@@ -24,7 +24,7 @@
         state: present
 
     - name: Start and enable Apache service
-      service:
+      ansible.builtin.service:
         name: httpd
         state: started
         enabled: yes
