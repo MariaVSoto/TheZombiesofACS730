@@ -86,7 +86,7 @@ jobs:
 
       - name: Terraform Apply
         if: |
-          (github.ref == 'refs/heads/staging' && github.event.inputs.environment == 'staging') ||
+          (github.ref == 'refs/heads/staging') ||
           (github.ref == 'refs/heads/prod' && github.event.inputs.environment == 'prod')
         run: terraform apply -input=false -auto-approve tf.plan
         working-directory: ${{ env.TF_DIR }}
