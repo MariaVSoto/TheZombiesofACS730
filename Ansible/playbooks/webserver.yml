@@ -58,11 +58,11 @@
       set_fact:
         private_ip: "{{ ansible_host }}"
 
-    - name: Create index.html
-      template:
-        src: templates/index.html.j2
-        dest: /var/www/html/index.html
-        mode: '0644'
-      vars:
-        hostname: "{{ ansible_hostname }}"
-        ip_address: "{{ private_ip }}" 
+    # - name: Create index.html
+    #   template:
+    #     src: templates/index.html.j2
+    #     dest: /var/www/html/index.html
+    #     mode: '0644'
+    #   vars:
+    #     hostname: "{{ ansible_hostname }}"
+    #     ip_address: "{{ private_ip }}" 
