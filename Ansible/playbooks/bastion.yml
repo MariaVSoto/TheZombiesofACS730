@@ -29,10 +29,10 @@
         state: started
         enabled: yes
 
-    - name: Copy image from S3
-      command: "aws s3 cp s3://{{ s3_bucket }}/web-content/webserver{{ webserver_id }}.jpg /var/www/html/"
-      args:
-        creates: "/var/www/html/webserver{{ webserver_id }}.jpg"
+    # - name: Copy image from S3
+    #   command: "aws s3 cp s3://{{ s3_bucket }}/web-content/webserver{{ webserver_id }}.jpg /var/www/html/"
+    #   args:
+    #     creates: "/var/www/html/webserver{{ webserver_id }}.jpg"
 
     - name: Get instance private IP
       set_fact:
