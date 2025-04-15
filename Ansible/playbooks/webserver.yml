@@ -2,7 +2,7 @@
 - name: Configure Web Servers
 
   hosts:
-    - tag_Name_zombies_webserver_private5
+    # - tag_Name_zombies_webserver_private5
     - tag_Name_zombies_webserver4
     - tag_Name_zombies_webserver_asg
 
