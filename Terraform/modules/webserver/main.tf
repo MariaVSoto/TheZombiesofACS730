@@ -106,7 +106,11 @@ resource "aws_launch_template" "asg_lt" {
   key_name      = var.key_name
   
   vpc_security_group_ids = [aws_security_group.web_sg.id]
-  
+
+  metadata_options {
+    http_tokens = "optional"  # allows IMDSv1
+}
+
   tag_specifications {
     resource_type = "instance"
     tags = merge(var.common_tags, var.additional_tags, {
@@ -211,6 +215,9 @@ resource "aws_launch_template" "bastion_lt" {
   # Use dedicated bastion security group instead of web_sg
   vpc_security_group_ids = [aws_security_group.bastion_sg.id]
 
+  metadata_options {
+    http_tokens = "optional"  # allows IMDSv1
+}
   tag_specifications {
     resource_type = "instance"
     tags = merge(var.common_tags, var.additional_tags, {
@@ -291,7 +298,7 @@ resource "aws_launch_template" "bastion_lt" {
 # ========================
 # Launch Template for Webserver 4
 # ========================
-resource "aws_launch_template" "webserver4_lt" {
+resource "aws_ltaunch_templae" "webserver4_lt" {
   name_prefix   = "${var.team_name}-webserver4-lt"
   image_id      = var.ami_id
   instance_type = var.instance_type
@@ -299,6 +306,9 @@ resource "aws_launch_template" "webserver4_lt" {
   
   vpc_security_group_ids = [aws_security_group.web_sg.id]
 
+  metadata_options {
+    http_tokens = "optional"  # allows IMDSv1
+}
   tag_specifications {
     resource_type = "instance"
     tags = merge(var.common_tags, var.additional_tags, {
@@ -392,6 +402,9 @@ resource "aws_launch_template" "private_lt" {
 
   vpc_security_group_ids = [aws_security_group.private_sg.id]
 
+  metadata_options {
+    http_tokens = "optional"  # allows IMDSv1
+}
   tag_specifications {
     resource_type = "instance"
     tags = merge(var.common_tags, var.additional_tags, {
@@ -436,6 +449,10 @@ resource "aws_instance" "bastion" {
   }
   subnet_id = var.public_subnet_ids[var.bastion_subnet_index]
 
+  metadata_options {
+    http_tokens = "optional"  # allows IMDSv1
+}
+
   tags = merge(var.common_tags, var.additional_tags, {
     Name = "${var.team_name}-webserver2"
   })
@@ -451,6 +468,9 @@ resource "aws_instance" "webserver4" {
   }
   subnet_id = var.public_subnet_ids[var.web4_subnet_index]
 
+  metadata_options {
+    http_tokens = "optional"  # allows IMDSv1
+}
   tags = merge(var.common_tags, var.additional_tags, {
     Name = "${var.team_name}-webserver4"
   })
@@ -466,6 +486,9 @@ resource "aws_instance" "vm5" {
   }
   subnet_id = var.private_subnet_ids[var.web5_subnet_index]
 
+  metadata_options {
+    http_tokens = "optional"  # allows IMDSv1
+}
   tags = merge(var.common_tags, var.additional_tags, {
     Name = "${var.team_name}-webserver-private5"
   })
@@ -480,6 +503,10 @@ resource "aws_instance" "vm6" {
     version = "$Latest"
   }
   subnet_id = var.private_subnet_ids[var.vm6_subnet_index]
+
+  metadata_options {
+    http_tokens = "optional"  # allows IMDSv1
+}
 
   tags = merge(var.common_tags, var.additional_tags, {
     Name = "${var.team_name}-webserver-private6"
