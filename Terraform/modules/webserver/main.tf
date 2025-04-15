@@ -107,10 +107,6 @@ resource "aws_launch_template" "asg_lt" {
   
   vpc_security_group_ids = [aws_security_group.web_sg.id]
 
-  metadata_options {
-    http_tokens = "optional"  # allows IMDSv1
-}
-
   tag_specifications {
     resource_type = "instance"
     tags = merge(var.common_tags, var.additional_tags, {
@@ -215,9 +211,6 @@ resource "aws_launch_template" "bastion_lt" {
   # Use dedicated bastion security group instead of web_sg
   vpc_security_group_ids = [aws_security_group.bastion_sg.id]
 
-  metadata_options {
-    http_tokens = "optional"  # allows IMDSv1
-}
   tag_specifications {
     resource_type = "instance"
     tags = merge(var.common_tags, var.additional_tags, {
@@ -306,9 +299,6 @@ resource "aws_ltaunch_templae" "webserver4_lt" {
   
   vpc_security_group_ids = [aws_security_group.web_sg.id]
 
-  metadata_options {
-    http_tokens = "optional"  # allows IMDSv1
-}
   tag_specifications {
     resource_type = "instance"
     tags = merge(var.common_tags, var.additional_tags, {
@@ -402,9 +392,6 @@ resource "aws_launch_template" "private_lt" {
 
   vpc_security_group_ids = [aws_security_group.private_sg.id]
 
-  metadata_options {
-    http_tokens = "optional"  # allows IMDSv1
-}
   tag_specifications {
     resource_type = "instance"
     tags = merge(var.common_tags, var.additional_tags, {
@@ -431,6 +418,10 @@ resource "aws_autoscaling_group" "web_asg" {
     id      = aws_launch_template.asg_lt.id
     version = "$Latest"
   }
+
+  metadata_options {
+    http_tokens = "optional"  # allows IMDSv1
+}
 
   tag {
     key                 = "Name"
