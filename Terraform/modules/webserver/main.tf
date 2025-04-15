@@ -291,7 +291,7 @@ resource "aws_launch_template" "bastion_lt" {
 # ========================
 # Launch Template for Webserver 4
 # ========================
-resource "aws_ltaunch_templae" "webserver4_lt" {
+resource "aws_launch_templae" "webserver4_lt" {
   name_prefix   = "${var.team_name}-webserver4-lt"
   image_id      = var.ami_id
   instance_type = var.instance_type
